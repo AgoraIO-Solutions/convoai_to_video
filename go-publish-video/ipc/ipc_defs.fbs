@@ -1,0 +1,75 @@
+namespace ipcgen;
+
+enum MessageType : byte {
+    INIT_COMMAND,
+    WRITE_VIDEO_SAMPLE_COMMAND,
+    WRITE_AUDIO_SAMPLE_COMMAND,
+    CLOSE_COMMAND,
+    STATUS_RESPONSE,
+    LOG_RESPONSE
+}
+
+enum MessagePayload : byte {
+    NONE,
+    Init,
+    MediaSample,
+    Status,
+    Log
+}
+
+enum ConnectionStatus : byte {
+    UNINITIALIZED,
+    INITIALIZED_SUCCESS,
+    INITIALIZED_FAILURE,
+    CONNECTED,
+    DISCONNECTED,
+    RECONNECTING,
+    RECONNECTED,
+    CONNECTION_LOST,
+    FAILED,
+    TOKEN_WILL_EXPIRE
+}
+
+enum LogLevel : byte {
+    DEBUG,
+    INFO,
+    WARN,
+    ERROR
+}
+
+table InitPayload {
+    app_id: string;
+    channel_name: string;
+    user_id: string;
+    token: string;
+    video_width: int32;
+    video_height: int32;
+    video_fps: int32;
+    video_codec_name: string;
+    audio_sample_rate: int32;
+    audio_channels: int32;
+}
+
+table MediaSamplePayload {
+    data: [byte];
+    timestamp_unix_nano: int64;
+}
+
+table StatusResponsePayload {
+    status: ConnectionStatus;
+    error_message: string;
+    additional_info: string;
+}
+
+table LogResponsePayload {
+    level: LogLevel;
+    message: string;
+}
+
+table IPCMessage {
+    message_type: MessageType;
+    payload_type: MessagePayload;
+    payload: [byte];
+}
+
+root_type IPCMessage;
