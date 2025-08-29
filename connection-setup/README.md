@@ -26,6 +26,7 @@ POST /session/start
   "quality": "high",
   "version": "v1",
   "video_encoding": "H264",
+  "activity_idle_timeout": 120,
   "agora_settings": {
     "app_id": "dllkSlkdmmppollalepls",
     "token": "lkmmopplek",
@@ -50,6 +51,7 @@ POST /session/start
 | quality | string | Yes | Video quality setting for the avatar stream. Accepted values: `"low"`, `"medium"`, `"high"`. Higher quality settings provide better visual fidelity but require more bandwidth. |
 | version | string | Yes | API version identifier. Currently supports `"v1"`. This ensures compatibility between client and server implementations. |
 | video_encoding | string | Yes | Video codec to be used for encoding the avatar stream. Supported values: `"H264"`, `"VP8"`, `"AV1"`. H264 provides the widest compatibility across devices and browsers. |
+| activity_idle_timeout | number | No | Session timeout in seconds after which the session will be automatically terminated if no activity is detected. Default is 120 seconds. Set to 0 to disable timeout. |
 | agora_settings | object | Yes | Configuration object for Agora RTC (Real-Time Communication) integration. Contains all necessary parameters for establishing the video/audio channel. |
 
 ### Agora Settings Object
@@ -66,6 +68,7 @@ POST /session/start
 ### Success Response (200 OK)
 ```json
 {
+  "session_id": "550e8400-e29b-41d4-a716-446655440000",
   "websocket_address": "wss://api.example.com/v1/websocket",
   "session_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"
 }
@@ -74,6 +77,7 @@ POST /session/start
 ### Response Fields
 | Field | Type | Description |
 |-------|------|-------------|
+| session_id | string | Unique identifier for this session. Used for session management and stopping the session later. |
 | websocket_address | string | WebSocket URL to connect to for audio streaming. Use this address to establish the WebSocket connection. |
 | session_token | string | JWT token for WebSocket authentication. Include this in the WebSocket connection headers as `Authorization: Bearer {session_token}`. |
 
@@ -106,7 +110,7 @@ POST /session/start
 
 ## Usage Flow
 1. **Send POST request** to `/session/start` with session configuration and API key in header
-2. **Receive response** containing `websocket_address` and `session_token`
+2. **Receive response** containing `session_id`, `websocket_address` and `session_token`
 3. **Connect to WebSocket** using the provided address and token
 4. **Send init command** via WebSocket with the same configuration
 5. **Stream audio data** using voice commands
@@ -131,6 +135,7 @@ DELETE /session/stop
 ### Request Format
 ```json
 {
+  "session_id": "550e8400-e29b-41d4-a716-446655440000",
   "session_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"
 }
 ```
@@ -138,7 +143,8 @@ DELETE /session/stop
 ### Request Fields
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| session_token | string | Yes | The session token received from the `/session/start` endpoint. Used to identify which session to terminate. |
+| session_id | string | Yes | The session ID received from the `/session/start` endpoint. Used to identify which session to terminate. |
+| session_token | string | Yes | The session token received from the `/session/start` endpoint. Used for authentication and session validation. |
 
 ### Response Format
 
@@ -154,7 +160,7 @@ DELETE /session/stop
 ```json
 {
   "error": "Invalid request",
-  "message": "Missing required field: session_token",
+  "message": "Missing required field: session_id",
   "code": "VALIDATION_ERROR"
 }
 ```

@@ -218,6 +218,16 @@ class SessionHandler(BaseHTTPRequestHandler):
             })
             return
         
+        # Handle activity_idle_timeout (optional field)
+        activity_idle_timeout = request_data.get("activity_idle_timeout", 120)
+        if not isinstance(activity_idle_timeout, (int, float)) or activity_idle_timeout < 0:
+            self._send_json_response(400, {
+                "error": "Invalid request",
+                "message": "activity_idle_timeout must be a non-negative number",
+                "code": "VALIDATION_ERROR"
+            })
+            return
+        
         # Generate session ID and token
         session_id = str(uuid.uuid4())
         session_token = self._generate_session_token()
@@ -227,12 +237,14 @@ class SessionHandler(BaseHTTPRequestHandler):
             "created_at": time.time(),
             "avatar_id": request_data["avatar_id"],
             "quality": request_data["quality"],
+            "activity_idle_timeout": activity_idle_timeout,
             "status": "active",
             "session_id": session_id
         }
         active_sessions[session_id] = session_data
         
         logger.info(f"Created new session with ID: {session_id}")
+        logger.info(f"Activity idle timeout: {activity_idle_timeout} seconds")
         logger.info(f"Active sessions count: {len(active_sessions)}")
         
         # Get server hostname for WebSocket address
@@ -271,10 +283,20 @@ class SessionHandler(BaseHTTPRequestHandler):
         
         # Validate required fields
         session_id = request_data.get("session_id")
+        session_token = request_data.get("session_token")
+        
         if not session_id:
             self._send_json_response(400, {
                 "error": "Invalid request",
                 "message": "Missing required field: session_id",
+                "code": "VALIDATION_ERROR"
+            })
+            return
+        
+        if not session_token:
+            self._send_json_response(400, {
+                "error": "Invalid request",
+                "message": "Missing required field: session_token",
                 "code": "VALIDATION_ERROR"
             })
             return
@@ -312,7 +334,7 @@ def main():
     logger.info("=" * 60)
     logger.info(f"Starting mock server on port {SERVER_PORT}")
     logger.info(f"Server hostname: {hostname}")
-    logger.info(f"WebSocket address will be: ws://{hostname}:{WEBSOCKET_PORT}")
+    logger.info(f"WebSocket address will be: ws://oai.agora.io:{WEBSOCKET_PORT}")
     logger.info(f"Valid API key: {VALID_API_KEY}")
     logger.info("")
     logger.info("Available endpoints:")
@@ -333,17 +355,17 @@ def main():
         server_address = ('0.0.0.0', SERVER_PORT)
         httpd = HTTPServer(server_address, SessionHandler)
         
-        logger.info(f"✅ Server started successfully on http://0.0.0.0:{SERVER_PORT}")
+        logger.info(f"Server started successfully on http://0.0.0.0:{SERVER_PORT}")
         logger.info("Waiting for requests...")
         
         httpd.serve_forever()
         
     except KeyboardInterrupt:
-        logger.info("\n🛑 Server shutdown requested")
+        logger.info("\nServer shutdown requested")
         httpd.shutdown()
-        logger.info("✅ Server stopped")
+        logger.info("Server stopped")
     except Exception as e:
-        logger.error(f"❌ Server error: {e}")
+        logger.error(f"Server error: {e}")
         raise
 
 

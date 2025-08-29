@@ -20,7 +20,7 @@ Required headers for establishing the WebSocket connection:
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| authorization | string | Yes | Bearer token authentication. Format: `Bearer {session_token}` where `{session_token}` is the token obtained from the initial connection setup endpoint. 
+| authorization | string | Yes | Bearer token authentication. Format: `Bearer {session_token}` where `{session_token}` is the token obtained from the initial connection setup endpoint. |
 
 ## Message Protocol
 
@@ -39,6 +39,7 @@ The first message sent after establishing the WebSocket connection must be an in
   "quality": "high",
   "version": "v1",
   "video_encoding": "H264",
+  "activity_idle_timeout": 120,
   "agora_settings": {
     "app_id": "dllkSlkdmmppollalepls",
     "token": "lkmmopplek",
@@ -58,6 +59,7 @@ The first message sent after establishing the WebSocket connection must be an in
 | quality | string | Yes | Video quality setting for the avatar stream. Accepted values: `"low"`, `"medium"`, `"high"`. Higher quality settings provide better visual fidelity but require more bandwidth. |
 | version | string | Yes | API version identifier. Currently supports `"v1"`. This ensures compatibility between client and server implementations. |
 | video_encoding | string | Yes | Video codec to be used for encoding the avatar stream. Supported values: `"H264"`, `"VP8"`, `"AV1"`. H264 provides the widest compatibility across devices and browsers. |
+| activity_idle_timeout | number | No | Session timeout in seconds after which the session will be automatically terminated if no activity is detected. Default is 120 seconds. Set to 0 to disable timeout. |
 | agora_settings | object | Yes | Configuration object for Agora RTC (Real-Time Communication) integration. Contains all necessary parameters for establishing the video/audio channel. |
 
 #### Agora Settings Object
@@ -116,7 +118,6 @@ Signals the end of current speech segment.
 | command | string | Yes | Must be set to `"voice_end"` for end-of-speech messages |
 | event_id | string | Yes | Unique identifier for this voice_end event. Should be a UUID or similar unique string for tracking purposes. |
 
-
 ### 4. Voice Interrupt Command
 
 Immediately interrupts any ongoing avatar speech. 
@@ -136,6 +137,62 @@ Immediately interrupts any ongoing avatar speech.
 |-------|------|----------|-------------|
 | command | string | Yes | Must be set to `"voice_interrupt"` for interrupt messages |
 | event_id | string | Yes | Unique identifier for this interrupt event. Should be a UUID or similar unique string for tracking purposes. |
+
+### 5. Heartbeat Command
+
+Periodic heartbeat message sent every 10 seconds to maintain connection during periods of no activity.
+
+#### Request Format
+
+```json
+{
+  "command": "heartbeat",
+  "event_id": "550e8400-e29b-41d4-a716-446655440003",
+  "timestamp": 1673456789000
+}
+```
+
+#### Request Fields
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| command | string | Yes | Must be set to `"heartbeat"` for heartbeat messages |
+| event_id | string | Yes | Unique identifier for this heartbeat event. Should be a UUID or similar unique string for tracking purposes. |
+| timestamp | number | Yes | Unix timestamp in milliseconds when the heartbeat was sent. |
+
+#### Response Format
+
+The server may optionally respond with a heartbeat acknowledgment:
+
+```json
+{
+  "command": "heartbeat_ack",
+  "event_id": "550e8400-e29b-41d4-a716-446655440003",
+  "timestamp": 1673456789000
+}
+```
+
+### 6. Special Command
+
+Reserved for future use to send special instructions or notifications (e.g., LLM tool calls, user talking notifications, avatar gestures).
+
+#### Request Format
+
+```json
+{
+  "command": "special",
+  "content": "XML markup for avatar gestures or other special instructions",
+  "event_id": "550e8400-e29b-41d4-a716-446655440005"
+}
+```
+
+#### Request Fields
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| command | string | Yes | Must be set to `"special"` for special instruction messages |
+| content | string | Yes | Special instruction content. Format depends on the specific use case (XML, JSON, etc.) |
+| event_id | string | Yes | Unique identifier for this special instruction event. Should be a UUID or similar unique string for tracking purposes. |
 
 ## Testing
 

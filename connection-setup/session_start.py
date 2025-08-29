@@ -20,6 +20,7 @@ def test_session_start_endpoint():
         "quality": "high",
         "version": "v1",
         "video_encoding": "H264",
+        "activity_idle_timeout": 120,
         "agora_settings": {
             "app_id": "dllkSlkdmmppollalepls",
             "token": "lkmmopplek",
@@ -87,7 +88,7 @@ def verify_success_response(data):
     """Verify that success response contains expected fields"""
     logger.info("Verifying success response structure...")
     
-    required_fields = ["websocket_address", "session_token"]
+    required_fields = ["session_id", "websocket_address", "session_token"]
     missing_fields = []
     
     for field in required_fields:
@@ -100,9 +101,17 @@ def verify_success_response(data):
         logger.error(f"❌ Missing required fields: {missing_fields}")
         return False
     
+    # Verify session_id is not empty
+    session_id = data.get("session_id")
+    if not session_id or len(session_id.strip()) == 0:
+        logger.error("❌ session_id is empty")
+        return False
+    else:
+        logger.info(f"✅ session_id present: {session_id}")
+    
     # Verify websocket_address format
     websocket_address = data["websocket_address"]
-    expected_websocket = "ws://localhost:8765"
+    expected_websocket = "ws://oai.agora.io:8765"
     
     if websocket_address != expected_websocket:
         logger.error(f"❌ Unexpected websocket_address: {websocket_address}")
@@ -161,6 +170,7 @@ def test_invalid_api_key():
         "quality": "high",
         "version": "v1",
         "video_encoding": "H264",
+        "activity_idle_timeout": 120,
         "agora_settings": {
             "app_id": "test_app_id",
             "token": "test_token",
@@ -203,6 +213,7 @@ def test_missing_api_key():
         "quality": "high",
         "version": "v1",
         "video_encoding": "H264",
+        "activity_idle_timeout": 120,
         "agora_settings": {
             "app_id": "test_app_id",
             "token": "test_token",
@@ -245,6 +256,7 @@ def test_malformed_payload():
         "quality": "high",
         "version": "v1",
         "video_encoding": "H264",
+        "activity_idle_timeout": 120,
         "agora_settings": {
             "app_id": "test_app_id",
             "token": "test_token",

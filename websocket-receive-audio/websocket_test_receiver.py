@@ -74,6 +74,7 @@ class WebSocketTestReceiver:
                         logger.info(f"  Quality: {data.get('quality')}")
                         logger.info(f"  Version: {data.get('version')}")
                         logger.info(f"  Video Encoding: {data.get('video_encoding')}")
+                        logger.info(f"  Activity Idle Timeout: {data.get('activity_idle_timeout', 120)}")
                         
                         if 'agora_settings' in data:
                             agora = data['agora_settings']
@@ -113,7 +114,7 @@ class WebSocketTestReceiver:
                     elif command == "voice_end":
                         # Handle voice end command
                         event_id = data.get("event_id", "unknown")
-                        logger.info(f"✅ Received VOICE_END command from {client_id}, event_id: {event_id}")
+                        logger.info(f"Received VOICE_END command from {client_id}, event_id: {event_id}")
                         
                         # Optional: Save accumulated audio when voice ends
                         if audio_data_buffer:
@@ -122,12 +123,27 @@ class WebSocketTestReceiver:
                     elif command == "voice_interrupt":
                         # Handle voice interrupt command
                         event_id = data.get("event_id", "unknown")
-                        logger.info(f"🛑 Received VOICE_INTERRUPT command from {client_id}, event_id: {event_id}")
+                        logger.info(f"Received VOICE_INTERRUPT command from {client_id}, event_id: {event_id}")
                         
                         # Optional: Clear audio buffer on interrupt
                         if audio_data_buffer:
                             logger.info(f"Voice interrupted, discarding {len(audio_data_buffer)} audio chunks")
                             audio_data_buffer.clear()
+                    
+                    elif command == "heartbeat":
+                        # Handle heartbeat command
+                        event_id = data.get("event_id", "unknown")
+                        timestamp = data.get("timestamp", 0)
+                        logger.info(f"Received HEARTBEAT command from {client_id}, event_id: {event_id}, timestamp: {timestamp}")
+                        
+                        # Send heartbeat acknowledgment
+                        heartbeat_ack = {
+                            "command": "heartbeat_ack",
+                            "event_id": event_id,
+                            "timestamp": timestamp
+                        }
+                        await websocket.send(json.dumps(heartbeat_ack))
+                        logger.info(f"Sent heartbeat acknowledgment to {client_id}")
                         
                     elif "avatar_id" in data and not command:
                         # Legacy format - handle for backward compatibility
@@ -199,6 +215,7 @@ class WebSocketTestReceiver:
         logger.info("  - 'voice': Audio data chunks") 
         logger.info("  - 'voice_end': End of voice transmission")
         logger.info("  - 'voice_interrupt': Voice interruption")
+        logger.info("  - 'heartbeat': Connection heartbeat")
         logger.info("")
         logger.info("Audio will be saved to: " + OUTPUT_WAV_FILE)
         logger.info("Press Ctrl+C to stop")
