@@ -15,7 +15,7 @@ import socket
 
 # Configuration
 SERVER_PORT = 8764
-WEBSOCKET_URL = "ws://localhost:8765"  # Default to localhost for testing - edit as needed
+WEBSOCKET_URL = "ws://oai.agora.io:8765"  # Default to localhost for testing - edit as needed
 VALID_API_KEY = os.environ.get("TEST_API_KEY", "test-api-key-123")  # Can be set via environment variable
 
 # In-memory storage for active sessions

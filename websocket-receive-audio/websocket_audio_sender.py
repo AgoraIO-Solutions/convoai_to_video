@@ -10,7 +10,7 @@ import sys
 import time
 
 # Configuration fields
-WEBSOCKET_ADDRESS = "ws://localhost:8765"  # For testing with local receiver
+WEBSOCKET_ADDRESS = "ws://oai.agora.io:8765"  # For testing with local receiver
 # WEBSOCKET_ADDRESS = "wss://api.example.com/v1/websocket"  # Production URL
 SESSION_TOKEN = "test_session_token_12345"  # Token that matches session_test_receiver.py
 APP_ID = "test_app_id"
