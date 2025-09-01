@@ -92,22 +92,8 @@ class SessionHandler(BaseHTTPRequestHandler):
         return True
     
     def _generate_session_token(self):
-        """Generate a mock JWT session token"""
-        # This is a mock token for testing purposes
-        header = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9"
-        payload_data = {
-            "sub": str(uuid.uuid4()),
-            "exp": int(time.time()) + 3600,  # 1 hour from now
-            "iat": int(time.time()),
-            "session_id": str(uuid.uuid4())
-        }
-        payload = json.dumps(payload_data, separators=(',', ':'))
-        # Base64 encode the payload (simplified for testing)
-        import base64
-        payload_b64 = base64.b64encode(payload.encode()).decode().rstrip('=')
-        signature = "test_signature_for_mock_server"
-        
-        return f"{header}.{payload_b64}.{signature}"
+        """Generate a hardcoded session token for testing"""
+        return "test_session_token_12345"
     
     def do_OPTIONS(self):
         """Handle CORS preflight requests"""
@@ -258,6 +244,7 @@ class SessionHandler(BaseHTTPRequestHandler):
             "session_token": session_token
         }
         
+        logger.info(f"Generated session_token: {session_token}")
         logger.info(f"Sending success response: {json.dumps(response_data, indent=2)}")
         self._send_json_response(200, response_data)
     

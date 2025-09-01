@@ -11,7 +11,7 @@ import time
 # Configuration fields
 WEBSOCKET_ADDRESS = "ws://localhost:8765"  # For testing with local receiver
 # WEBSOCKET_ADDRESS = "wss://api.example.com/v1/websocket"  # Production URL
-SESSION_TOKEN = "ws_session_token_here"
+SESSION_TOKEN = "test_session_token_12345"  # Hardcoded token that matches session_test_receiver.py
 APP_ID = ""
 TOKEN = ""
 CHANNEL = "test"
@@ -42,6 +42,7 @@ class WebSocketAudioSender:
             "quality": "high",
             "version": "v1",
             "video_encoding": "H264",
+            "activity_idle_timeout": 120,
             "agora_settings": {
                 "app_id": APP_ID,
                 "token": TOKEN,
@@ -53,6 +54,7 @@ class WebSocketAudioSender:
         
         try:
             logger.info(f"Connecting to WebSocket: {WEBSOCKET_ADDRESS}")
+            logger.info(f"Using session token: {SESSION_TOKEN}")
             self.websocket = await websockets.connect(
                 WEBSOCKET_ADDRESS,
                 additional_headers=headers

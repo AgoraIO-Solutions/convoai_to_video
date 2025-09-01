@@ -30,10 +30,38 @@ def get_server_hostname():
 
 
 class WebSocketTestReceiver:
+    EXPECTED_SESSION_TOKEN = "test_session_token_12345"
+    
     def __init__(self):
         self.audio_chunks = []
         self.connection_count = 0
         self.session_data = {}
+        
+    def _validate_session_token(self, websocket):
+        """Validate the session token from WebSocket headers"""
+        try:
+            # Try different ways to access headers depending on websockets version
+            headers = None
+            if hasattr(websocket, 'request_headers'):
+                headers = websocket.request_headers
+            elif hasattr(websocket, 'request'):
+                headers = websocket.request.headers
+            
+            if headers:
+                auth_header = headers.get("authorization", "")
+                expected_header = f"Bearer {self.EXPECTED_SESSION_TOKEN}"
+                
+                if auth_header == expected_header:
+                    return True
+                else:
+                    logger.warning(f"Invalid session token. Expected: {expected_header}, Got: {auth_header}")
+                    return False
+            else:
+                logger.warning("Could not access WebSocket headers for token validation")
+                return True  # Allow connection if we can't validate (for compatibility)
+        except Exception as e:
+            logger.error(f"Error validating session token: {e}")
+            return True  # Allow connection if validation fails
         
     async def handle_client(self, websocket):
         """Handle incoming WebSocket connections"""
@@ -41,6 +69,14 @@ class WebSocketTestReceiver:
         self.connection_count += 1
         remote_address = websocket.remote_address if hasattr(websocket, 'remote_address') else 'unknown'
         logger.info(f"New connection: {client_id} from {remote_address}")
+        
+        # Validate session token
+        if not self._validate_session_token(websocket):
+            logger.error(f"Session token validation failed for {client_id}")
+            await websocket.close(code=1008, reason="Invalid session token")
+            return
+        else:
+            logger.info(f"Session token validated successfully for {client_id}")
         
         chunk_count = 0
         audio_data_buffer = []
@@ -209,6 +245,10 @@ class WebSocketTestReceiver:
         logger.info("WebSocket URLs:")
         logger.info(f"  ws://{hostname}:{WEBSOCKET_PORT}")
         logger.info(f"  ws://localhost:{WEBSOCKET_PORT}")
+        logger.info("")
+        logger.info("Session Token Authentication:")
+        logger.info(f"  Expected token: {self.EXPECTED_SESSION_TOKEN}")
+        logger.info("  Token must be sent in Authorization header: Bearer <token>")
         logger.info("")
         logger.info("Expecting messages with commands:")
         logger.info("  - 'init': Session initialization")
