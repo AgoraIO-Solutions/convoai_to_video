@@ -70,7 +70,7 @@
   <!-- Init command -->
   <line x1="155" y1="430" x2="730" y2="430" stroke="#333" stroke-width="2" marker-end="url(#arrowhead)"/>
   <text x="440" y="425" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="#333">Init Command</text>
-  <text x="165" y="445" font-family="Arial, sans-serif" font-size="10" fill="#666">{command: "init", avatar_id, quality,</text>
+  <text x="165" y="445" font-family="Arial, sans-serif" font-size="10" fill="#666">{command: "init", session_id, avatar_id, quality,</text>
   <text x="165" y="460" font-family="Arial, sans-serif" font-size="10" fill="#666">activity_idle_timeout, agora_settings}</text>
   
   <!-- Phase 3: Avatar Publishing -->
