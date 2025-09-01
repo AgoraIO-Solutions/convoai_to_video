@@ -6,18 +6,19 @@ import wave
 import websockets
 import logging
 import ssl
+import sys
 import time
 
 # Configuration fields
 WEBSOCKET_ADDRESS = "ws://localhost:8765"  # For testing with local receiver
 # WEBSOCKET_ADDRESS = "wss://api.example.com/v1/websocket"  # Production URL
-SESSION_TOKEN = "test_session_token_12345"  # Hardcoded token that matches session_test_receiver.py
-APP_ID = ""
-TOKEN = ""
-CHANNEL = "test"
+SESSION_TOKEN = "test_session_token_12345"  # Token that matches session_test_receiver.py
+APP_ID = "test_app_id"
+TOKEN = "test_token"
+CHANNEL = "test_channel"
 UID = "200"
 ENABLE_STRING_UID = False
-AVATAR_ID = "avatar123"
+AVATAR_ID = "test_avatar_123"
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
@@ -32,34 +33,42 @@ class WebSocketAudioSender:
         
     async def connect(self):
         """Establish WebSocket connection and send initial payload"""
-        headers = {
-            "authorization": f"Bearer {SESSION_TOKEN}"
-        }
-        
-        payload = {
-            "command": "init",  # Added missing command field as per documentation
-            "avatar_id": AVATAR_ID,
-            "quality": "high",
-            "version": "v1",
-            "video_encoding": "H264",
-            "activity_idle_timeout": 120,
-            "agora_settings": {
-                "app_id": APP_ID,
-                "token": TOKEN,
-                "channel": CHANNEL,
-                "uid": UID,
-                "enable_string_uid": ENABLE_STRING_UID
-            }
-        }
-        
+        # For older websockets versions, we'll include auth in the URL or handle it differently
         try:
             logger.info(f"Connecting to WebSocket: {WEBSOCKET_ADDRESS}")
             logger.info(f"Using session token: {SESSION_TOKEN}")
-            self.websocket = await websockets.connect(
-                WEBSOCKET_ADDRESS,
-                additional_headers=headers
-            )
-            logger.info("WebSocket connected successfully")
+            
+            # Try with additional_headers first (newer versions)
+            try:
+                headers = {"authorization": f"Bearer {SESSION_TOKEN}"}
+                self.websocket = await websockets.connect(
+                    WEBSOCKET_ADDRESS,
+                    additional_headers=headers
+                )
+                logger.info("WebSocket connected successfully (with headers)")
+            except TypeError:
+                # Fallback for older versions - connect without headers
+                logger.info("Older websockets version detected, connecting without headers...")
+                self.websocket = await websockets.connect(WEBSOCKET_ADDRESS)
+                logger.info("WebSocket connected successfully (legacy mode)")
+            
+            payload = {
+                "command": "init",
+                "avatar_id": AVATAR_ID,
+                "quality": "high",
+                "version": "v1",
+                "video_encoding": "H264",
+                "activity_idle_timeout": 120,
+                "agora_settings": {
+                    "app_id": APP_ID,
+                    "token": TOKEN,
+                    "channel": CHANNEL,
+                    "uid": UID,
+                    "enable_string_uid": ENABLE_STRING_UID
+                },
+                # Include session token in payload for older websockets versions
+                "session_token": SESSION_TOKEN
+            }
             
             # Send initial configuration payload
             await self.websocket.send(json.dumps(payload))
@@ -73,6 +82,13 @@ class WebSocketAudioSender:
             
             # Send audio chunks
             await self.send_audio_chunks()
+            
+            # Send voice_end command after audio is complete
+            await self.send_voice_end()
+            
+            # Send a test heartbeat
+            await asyncio.sleep(1)
+            await self.send_heartbeat()
             
         except OSError as e:
             if "Connect call failed" in str(e) or "Connection refused" in str(e):
@@ -155,16 +171,44 @@ class WebSocketAudioSender:
                                 await asyncio.sleep(0.01)
                     
                     # Small delay between chunks
-                    await asyncio.sleep(0.01)
+                    await asyncio.sleep(0.1)  # Slightly longer delay for more realistic streaming
                 
-                # Wait before closing
-                await asyncio.sleep(2.0)
+                logger.info(f"Finished sending {chunk_count} audio chunks")
                 
         except Exception as e:
             logger.error(f"Error sending WAV: {e}")
             raise
-        finally:
-            logger.info("Finished sending WAV")
+    
+    async def send_voice_end(self):
+        """Send voice_end command to signal end of speech"""
+        event_id = str(uuid.uuid4())
+        msg = {
+            "command": "voice_end",
+            "event_id": event_id
+        }
+        
+        try:
+            await self.websocket.send(json.dumps(msg))
+            logger.info(f"Sent voice_end command, event_id: {event_id}")
+        except Exception as e:
+            logger.error(f"Error sending voice_end: {e}")
+    
+    async def send_heartbeat(self):
+        """Send a heartbeat message"""
+        event_id = str(uuid.uuid4())
+        timestamp = int(time.time() * 1000)  # Unix timestamp in milliseconds
+        
+        msg = {
+            "command": "heartbeat",
+            "event_id": event_id,
+            "timestamp": timestamp
+        }
+        
+        try:
+            await self.websocket.send(json.dumps(msg))
+            logger.info(f"Sent heartbeat, event_id: {event_id}, timestamp: {timestamp}")
+        except Exception as e:
+            logger.error(f"Error sending heartbeat: {e}")
     
     async def disconnect(self):
         """Close WebSocket connection"""
@@ -176,14 +220,24 @@ class WebSocketAudioSender:
         """Main execution flow"""
         try:
             await self.connect()
+            # Wait a bit before closing
+            await asyncio.sleep(2.0)
         finally:
             await self.disconnect()
 
 
 async def main():
+    # Check if input.wav exists
+    import os
+    if not os.path.exists("input.wav"):
+        logger.error("input.wav file not found!")
+        logger.error("Please create an input.wav file in the current directory")
+        sys.exit(1)
+    
     sender = WebSocketAudioSender("input.wav")
     try:
         await sender.run()
+        logger.info("Audio sending completed successfully!")
     except OSError:
         sys.exit(1)
     except KeyboardInterrupt:
@@ -194,5 +248,4 @@ async def main():
 
 
 if __name__ == "__main__":
-    import sys
     asyncio.run(main())

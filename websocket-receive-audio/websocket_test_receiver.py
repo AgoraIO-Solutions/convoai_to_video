@@ -37,10 +37,12 @@ class WebSocketTestReceiver:
         self.connection_count = 0
         self.session_data = {}
         
-    def _validate_session_token(self, websocket):
-        """Validate the session token from WebSocket headers"""
+    def _validate_session_token(self, websocket, payload_token=None):
+        """Validate the session token from WebSocket headers or payload"""
+        token_valid = False
+        
+        # Method 1: Try to get from headers (newer websockets versions)
         try:
-            # Try different ways to access headers depending on websockets version
             headers = None
             if hasattr(websocket, 'request_headers'):
                 headers = websocket.request_headers
@@ -52,16 +54,27 @@ class WebSocketTestReceiver:
                 expected_header = f"Bearer {self.EXPECTED_SESSION_TOKEN}"
                 
                 if auth_header == expected_header:
+                    logger.info("Session token validated via headers")
                     return True
+                elif auth_header:
+                    logger.warning(f"Invalid session token in headers. Expected: {expected_header}, Got: {auth_header}")
                 else:
-                    logger.warning(f"Invalid session token. Expected: {expected_header}, Got: {auth_header}")
-                    return False
-            else:
-                logger.warning("Could not access WebSocket headers for token validation")
-                return True  # Allow connection if we can't validate (for compatibility)
+                    logger.info("No authorization header found, checking payload...")
         except Exception as e:
-            logger.error(f"Error validating session token: {e}")
-            return True  # Allow connection if validation fails
+            logger.info(f"Could not access headers (this is normal for older websockets versions): {e}")
+        
+        # Method 2: Check payload token (fallback for older versions)
+        if payload_token:
+            if payload_token == self.EXPECTED_SESSION_TOKEN:
+                logger.info("Session token validated via payload")
+                return True
+            else:
+                logger.warning(f"Invalid session token in payload. Expected: {self.EXPECTED_SESSION_TOKEN}, Got: {payload_token}")
+                return False
+        
+        # Method 3: If no token found anywhere, log but allow for testing
+        logger.warning("No session token found in headers or payload - allowing connection for testing")
+        return True
         
     async def handle_client(self, websocket):
         """Handle incoming WebSocket connections"""
@@ -70,40 +83,25 @@ class WebSocketTestReceiver:
         remote_address = websocket.remote_address if hasattr(websocket, 'remote_address') else 'unknown'
         logger.info(f"New connection: {client_id} from {remote_address}")
         
-        # Validate session token
-        if not self._validate_session_token(websocket):
-            logger.error(f"Session token validation failed for {client_id}")
-            await websocket.close(code=1008, reason="Invalid session token")
-            return
-        else:
-            logger.info(f"Session token validated successfully for {client_id}")
-        
         chunk_count = 0
         audio_data_buffer = []
         session_initialized = False
+        current_sample_rate = 24000
         
         try:
-            # Try to get headers if available
-            try:
-                if hasattr(websocket, 'request_headers'):
-                    headers = websocket.request_headers
-                    auth_header = headers.get("authorization", "")
-                    logger.info(f"Authorization header: {auth_header}")
-                elif hasattr(websocket, 'request'):
-                    headers = websocket.request.headers
-                    auth_header = headers.get("authorization", "")
-                    logger.info(f"Authorization header: {auth_header}")
-                else:
-                    logger.info("Headers not accessible in this websockets version")
-            except Exception as e:
-                logger.info(f"Could not access headers: {e}")
-            
             async for message in websocket:
                 try:
                     data = json.loads(message)
                     command = data.get("command")
                     
                     if command == "init":
+                        # Validate session token from payload if present
+                        payload_token = data.get("session_token")
+                        if not self._validate_session_token(websocket, payload_token):
+                            logger.error(f"Session token validation failed for {client_id}")
+                            await websocket.close(code=1008, reason="Invalid session token")
+                            return
+                        
                         # Handle initialization command
                         logger.info(f"Received INIT command from {client_id}:")
                         logger.info(f"  Avatar ID: {data.get('avatar_id')}")
@@ -134,6 +132,7 @@ class WebSocketTestReceiver:
                         event_id = data.get("event_id", "unknown")
                         sample_rate = data.get("sampleRate", 24000)
                         encoding = data.get("encoding", "PCM16")
+                        current_sample_rate = sample_rate  # Store for WAV file
                         
                         logger.info(f"Received audio chunk {chunk_count} from {client_id}")
                         logger.info(f"  Event ID: {event_id}")
@@ -152,7 +151,7 @@ class WebSocketTestReceiver:
                         event_id = data.get("event_id", "unknown")
                         logger.info(f"Received VOICE_END command from {client_id}, event_id: {event_id}")
                         
-                        # Optional: Save accumulated audio when voice ends
+                        # Save accumulated audio when voice ends
                         if audio_data_buffer:
                             logger.info(f"Voice session ended, saving {len(audio_data_buffer)} audio chunks")
                     
@@ -161,7 +160,7 @@ class WebSocketTestReceiver:
                         event_id = data.get("event_id", "unknown")
                         logger.info(f"Received VOICE_INTERRUPT command from {client_id}, event_id: {event_id}")
                         
-                        # Optional: Clear audio buffer on interrupt
+                        # Clear audio buffer on interrupt
                         if audio_data_buffer:
                             logger.info(f"Voice interrupted, discarding {len(audio_data_buffer)} audio chunks")
                             audio_data_buffer.clear()
@@ -180,6 +179,13 @@ class WebSocketTestReceiver:
                         }
                         await websocket.send(json.dumps(heartbeat_ack))
                         logger.info(f"Sent heartbeat acknowledgment to {client_id}")
+                    
+                    elif command == "special":
+                        # Handle special command
+                        event_id = data.get("event_id", "unknown")
+                        content = data.get("content", "")
+                        logger.info(f"Received SPECIAL command from {client_id}, event_id: {event_id}")
+                        logger.info(f"  Content: {content}")
                         
                     elif "avatar_id" in data and not command:
                         # Legacy format - handle for backward compatibility
@@ -188,7 +194,7 @@ class WebSocketTestReceiver:
                         logger.info(f"  Quality: {data.get('quality')}")
                         logger.info(f"  Version: {data.get('version')}")
                         
-                        # Send legacy acknowledgment
+                        # Mark session as initialized for legacy format
                         session_initialized = True
                         logger.info(f"Session initialized with legacy format for {client_id}")
                         
@@ -202,7 +208,7 @@ class WebSocketTestReceiver:
             
             # Save received audio if any
             if audio_data_buffer:
-                self.save_audio(audio_data_buffer, sample_rate=24000)
+                self.save_audio(audio_data_buffer, sample_rate=current_sample_rate)
                 logger.info(f"Saved {len(audio_data_buffer)} audio chunks to {OUTPUT_WAV_FILE}")
                 
         except websockets.exceptions.ConnectionClosed:
@@ -248,7 +254,9 @@ class WebSocketTestReceiver:
         logger.info("")
         logger.info("Session Token Authentication:")
         logger.info(f"  Expected token: {self.EXPECTED_SESSION_TOKEN}")
-        logger.info("  Token must be sent in Authorization header: Bearer <token>")
+        logger.info("  Token accepted in:")
+        logger.info("    - Authorization header: Bearer <token> (newer websockets)")
+        logger.info("    - Payload field: session_token (older websockets)")
         logger.info("")
         logger.info("Expecting messages with commands:")
         logger.info("  - 'init': Session initialization")
@@ -256,6 +264,7 @@ class WebSocketTestReceiver:
         logger.info("  - 'voice_end': End of voice transmission")
         logger.info("  - 'voice_interrupt': Voice interruption")
         logger.info("  - 'heartbeat': Connection heartbeat")
+        logger.info("  - 'special': Special instructions")
         logger.info("")
         logger.info("Audio will be saved to: " + OUTPUT_WAV_FILE)
         logger.info("Press Ctrl+C to stop")

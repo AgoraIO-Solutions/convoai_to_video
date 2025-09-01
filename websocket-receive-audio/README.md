@@ -8,12 +8,16 @@ This document describes the WebSocket API for driving remote audio and video gen
 
 Required headers for establishing the WebSocket connection:
 
-```json
-{
-  "accept": "application/json",
-  "content-type": "application/json",
-  "authorization": "Bearer {session_token}"
+```python
+headers = {
+    "authorization": "Bearer {session_token}"
 }
+
+# Use with websockets library:
+websocket = await websockets.connect(
+    "ws://localhost:8765", 
+    additional_headers=headers
+)
 ```
 
 #### Header Fields
@@ -196,17 +200,67 @@ Reserved for future use to send special instructions or notifications (e.g., LLM
 
 ## Testing
 
+### Prerequisites
+Before running the tests, you need an audio file:
+1. Create or obtain a WAV file named `input.wav` in the `websocket-receive-audio` directory
+2. The WAV file should be PCM 16-bit format for best compatibility
+
 ### Steps to Run the Test
-To run the test locally you can use the scripts as they are below.     
-To send audio to your own websocket edit the websocket address in websocket_audio_sender.py        
+
+To test the WebSocket API locally:
+
 1. **Start the test receiver**:
    ```bash
    python websocket_test_receiver.py
    ```
+   This starts a WebSocket server on `ws://localhost:8765` that will:
+   - Validate session tokens
+   - Log all received commands
+   - Save received audio as `received_audio.wav`
 
 2. **In a new terminal, run the audio sender**:
    ```bash
    python websocket_audio_sender.py
    ```
+   This will:
+   - Connect to the WebSocket server
+   - Send an `init` command with session configuration
+   - Stream audio chunks from `input.wav`
+   - Send a `voice_end` command when complete
 
-3. **Verify the test**: Check that `received_audio.wav` is created in your directory after the sender completes.
+3. **Verify the test**: 
+   - Check the receiver terminal for logged messages
+   - Verify that `received_audio.wav` is created in your directory
+   - Compare the original `input.wav` with `received_audio.wav`
+
+### Testing Against Your Own Implementation
+
+To test against your own WebSocket server instead of the mock receiver:
+
+1. **Update the WebSocket address** in `websocket_audio_sender.py`:
+   ```python
+   WEBSOCKET_ADDRESS = "wss://your-api.com/v1/websocket"
+   ```
+
+2. **Update the session token** with a real token from your connection setup API:
+   ```python
+   SESSION_TOKEN = "your_real_session_token_here"
+   ```
+
+3. **Update configuration values** as needed:
+   ```python
+   APP_ID = "your_agora_app_id"
+   TOKEN = "your_agora_token"  
+   CHANNEL = "your_channel_name"
+   UID = "your_user_id"
+   AVATAR_ID = "your_avatar_id"
+   ```
+
+4. Run the sender script normally
+
+### Testing Notes
+- The mock receiver expects session token `test_session_token_12345` by default
+- Tests cover essential commands: `init`, `voice`, `voice_end`, and `heartbeat`
+- All commands are logged with detailed information for debugging
+- Audio is saved in PCM 16-bit WAV format
+- The sender demonstrates the core message flow needed for audio streaming

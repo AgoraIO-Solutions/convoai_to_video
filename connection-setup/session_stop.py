@@ -3,26 +3,80 @@ import json
 import logging
 
 # Configuration for local testing
-API_ENDPOINT = "http://localhost:8764/session/stop"  # Points to mock server
-# API_ENDPOINT = "https://api.example.com/session/stop"  # For production testing
+API_ENDPOINT_START = "http://localhost:8764/session/start"  # For creating test session
+API_ENDPOINT_STOP = "http://localhost:8764/session/stop"   # Points to mock server
+# API_ENDPOINT_STOP = "https://api.example.com/session/stop"  # For production testing
 API_KEY = "test-api-key-123"  # Matches mock server default
 
-# Example session data (in practice, this would come from session/start response)
-EXAMPLE_SESSION_ID = "550e8400-e29b-41d4-a716-446655440000"
-EXAMPLE_SESSION_TOKEN = "test_session_token_12345"
+# These will be populated by creating a real session first
+test_session_id = None
+test_session_token = None
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
+def create_test_session():
+    """Create a test session to use for stop testing"""
+    global test_session_id, test_session_token
+    
+    logger.info("Creating test session for stop endpoint testing...")
+    
+    payload = {
+        "avatar_id": "test_avatar_for_stop_test",
+        "quality": "high",
+        "version": "v1",
+        "video_encoding": "H264",
+        "activity_idle_timeout": 120,
+        "agora_settings": {
+            "app_id": "test_app_id",
+            "token": "test_token",
+            "channel": "test_channel",
+            "uid": "123",
+            "enable_string_uid": False
+        }
+    }
+    
+    headers = {
+        "accept": "application/json",
+        "content-type": "application/json",
+        "x-api-key": API_KEY
+    }
+    
+    try:
+        response = requests.post(API_ENDPOINT_START, headers=headers, json=payload, timeout=30)
+        
+        if response.status_code == 200:
+            data = response.json()
+            test_session_id = data.get("session_id")
+            test_session_token = data.get("session_token")
+            
+            logger.info(f"✅ Test session created successfully!")
+            logger.info(f"Session ID: {test_session_id}")
+            logger.info(f"Session Token: {test_session_token}")
+            return True
+        else:
+            logger.error(f"❌ Failed to create test session: {response.status_code}")
+            return False
+            
+    except Exception as e:
+        logger.error(f"❌ Error creating test session: {e}")
+        return False
+
+
 def test_session_stop_endpoint():
     """Test the session stop DELETE endpoint"""
     
-    # Prepare test payload with both session_id and session_token
+    # First create a test session
+    if not create_test_session():
+        logger.error("❌ Cannot proceed with stop test - failed to create test session")
+        return False
+    
+    # Prepare test payload with real session data
     payload = {
-        "session_id": EXAMPLE_SESSION_ID,
-        "session_token": EXAMPLE_SESSION_TOKEN
+        "session_id": test_session_id,
+        "session_token": test_session_token
     }
     
     # API key in headers for security
@@ -32,14 +86,14 @@ def test_session_stop_endpoint():
         "x-api-key": API_KEY
     }
     
-    logger.info(f"Testing endpoint: {API_ENDPOINT}")
+    logger.info(f"Testing endpoint: {API_ENDPOINT_STOP}")
     logger.info(f"Headers (API key masked): {dict(headers, **{'x-api-key': '***masked***'})}")
     logger.info(f"Payload: {json.dumps(payload, indent=2)}")
     
     try:
         # Send DELETE request
         response = requests.delete(
-            API_ENDPOINT,
+            API_ENDPOINT_STOP,
             headers=headers,
             json=payload,
             timeout=30
@@ -62,7 +116,7 @@ def test_session_stop_endpoint():
             return verify_success_response(response_data)
         else:
             logger.error(f"❌ Request failed with status {response.status_code}")
-            return verify_error_response(response_data, response.status_code)
+            return False
             
     except requests.exceptions.ConnectionError as e:
         logger.error(f"❌ Connection error: {e}")
@@ -156,9 +210,10 @@ def test_invalid_api_key():
     logger.info("\n" + "="*50)
     logger.info("Testing with invalid API key...")
     
+    # Use hardcoded values for error testing (don't need real session)
     payload = {
-        "session_id": EXAMPLE_SESSION_ID,
-        "session_token": EXAMPLE_SESSION_TOKEN
+        "session_id": "test_session_id",
+        "session_token": "test_session_token"
     }
     
     # Invalid API key in headers
@@ -169,7 +224,7 @@ def test_invalid_api_key():
     }
     
     try:
-        response = requests.delete(API_ENDPOINT, headers=headers, json=payload, timeout=30)
+        response = requests.delete(API_ENDPOINT_STOP, headers=headers, json=payload, timeout=30)
         logger.info(f"Response status code: {response.status_code}")
         
         if response.status_code == 401:
@@ -189,9 +244,10 @@ def test_missing_api_key():
     logger.info("\n" + "="*50)
     logger.info("Testing with missing API key header...")
     
+    # Use hardcoded values for error testing (don't need real session)
     payload = {
-        "session_id": EXAMPLE_SESSION_ID,
-        "session_token": EXAMPLE_SESSION_TOKEN
+        "session_id": "test_session_id",
+        "session_token": "test_session_token"
     }
     
     # Headers without API key
@@ -202,7 +258,7 @@ def test_missing_api_key():
     }
     
     try:
-        response = requests.delete(API_ENDPOINT, headers=headers, json=payload, timeout=30)
+        response = requests.delete(API_ENDPOINT_STOP, headers=headers, json=payload, timeout=30)
         logger.info(f"Response status code: {response.status_code}")
         
         if response.status_code in [401, 403]:
@@ -224,7 +280,7 @@ def test_missing_session_id():
     
     # Missing session_id field
     payload = {
-        "session_token": EXAMPLE_SESSION_TOKEN
+        "session_token": "test_session_token"
     }
     
     headers = {
@@ -234,7 +290,7 @@ def test_missing_session_id():
     }
     
     try:
-        response = requests.delete(API_ENDPOINT, headers=headers, json=payload, timeout=30)
+        response = requests.delete(API_ENDPOINT_STOP, headers=headers, json=payload, timeout=30)
         logger.info(f"Response status code: {response.status_code}")
         
         if response.status_code == 400:
@@ -256,7 +312,7 @@ def test_missing_session_token():
     
     # Missing session_token field
     payload = {
-        "session_id": EXAMPLE_SESSION_ID
+        "session_id": "test_session_id"
     }
     
     headers = {
@@ -266,7 +322,7 @@ def test_missing_session_token():
     }
     
     try:
-        response = requests.delete(API_ENDPOINT, headers=headers, json=payload, timeout=30)
+        response = requests.delete(API_ENDPOINT_STOP, headers=headers, json=payload, timeout=30)
         logger.info(f"Response status code: {response.status_code}")
         
         if response.status_code == 400:
@@ -288,7 +344,7 @@ def test_invalid_session_id():
     
     payload = {
         "session_id": "invalid_session_id_that_does_not_exist",
-        "session_token": EXAMPLE_SESSION_TOKEN
+        "session_token": "test_session_token"
     }
     
     headers = {
@@ -298,7 +354,7 @@ def test_invalid_session_id():
     }
     
     try:
-        response = requests.delete(API_ENDPOINT, headers=headers, json=payload, timeout=30)
+        response = requests.delete(API_ENDPOINT_STOP, headers=headers, json=payload, timeout=30)
         logger.info(f"Response status code: {response.status_code}")
         
         if response.status_code == 404:
