@@ -4,7 +4,8 @@ import logging
 
 # Configuration for local testing
 API_ENDPOINT = "http://localhost:8764/session/start"  # Points to mock server
-API_KEY = "YOUR_API_KEY"
+# API_ENDPOINT = "https://api.example.com/session/start"  # For production testing
+API_KEY = "test-api-key-123"  # Matches mock server default
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)

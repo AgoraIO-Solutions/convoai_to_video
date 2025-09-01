@@ -225,7 +225,8 @@ class SessionHandler(BaseHTTPRequestHandler):
             "quality": request_data["quality"],
             "activity_idle_timeout": activity_idle_timeout,
             "status": "active",
-            "session_id": session_id
+            "session_id": session_id,
+            "session_token": session_token  # Store token for validation in stop endpoint
         }
         active_sessions[session_id] = session_data
         
@@ -297,6 +298,15 @@ class SessionHandler(BaseHTTPRequestHandler):
             })
             return
         
+        # Validate session token (optional - for enhanced security)
+        session_data = active_sessions[session_id]
+        stored_token = session_data.get("session_token")
+        if stored_token and stored_token != session_token:
+            logger.warning(f"Session token mismatch for session {session_id}")
+            logger.warning(f"Expected: {stored_token}, Got: {session_token}")
+            # For this mock server, we'll accept any token, but log the mismatch
+            # In a real implementation, you might want to return 401 Unauthorized
+        
         # Remove session from active sessions
         del active_sessions[session_id]
         logger.info(f"Terminated session with ID: {session_id}")
@@ -332,6 +342,11 @@ def main():
     logger.info("")
     logger.info("To set a custom API key, use environment variable:")
     logger.info("  export TEST_API_KEY='your-custom-key'")
+    logger.info("")
+    logger.info("Usage:")
+    logger.info("  1. Start this mock server: python session_test_receiver.py")
+    logger.info("  2. In another terminal: python session_start.py")
+    logger.info("  3. In another terminal: python session_stop.py")
     logger.info("")
     logger.info("Press Ctrl+C to stop the server")
     logger.info("=" * 60)

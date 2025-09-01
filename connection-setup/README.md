@@ -191,20 +191,48 @@ DELETE /session/stop
 - Always use HTTPS in production to protect the API key in transit
 
 ## Testing
-Use the provided test scripts to verify the endpoints:
+Use the provided test scripts to verify the endpoints and WebSocket functionality:
 
-### Start Session Testing
+### Mock Server
+First, start the mock server for local testing:
 ```bash
-python session_start.py
+python session_test_receiver.py
 ```
+This will start a mock server on `http://localhost:8764` that simulates the session management endpoints.
 
-### Stop Session Testing
+### Individual Component Testing
 ```bash
+# Test session start endpoint (requires mock server running)
+python session_start.py
+
+# Test session stop endpoint (requires mock server running)
 python session_stop.py
 ```
 
 ### Complete Session Flow Testing
 ```bash
-# Test the full flow: start -> stop
+# Start mock server in background, then test the full flow
+python session_test_receiver.py &
 python session_start.py && python session_stop.py
+
+# Or run sequentially in separate terminals:
+# Terminal 1: python session_test_receiver.py
+# Terminal 2: python session_start.py && python session_stop.py
 ```
+
+### Testing Against Your Own Implementation
+To test against your own API implementation instead of the mock server:
+
+1. Update the `API_ENDPOINT` variable in both test scripts:
+   - In `session_start.py`: Change to your start endpoint URL
+   - In `session_stop.py`: Change to your stop endpoint URL
+
+2. Update the `API_KEY` variable with your actual API key
+
+3. Run the test scripts normally
+
+### Testing Notes
+- The mock server (`session_test_receiver.py`) uses API key `test-api-key-123` by default
+- You can set a custom API key via environment variable: `export TEST_API_KEY='your-custom-key'`
+- All test scripts include comprehensive validation and error handling tests
+- The mock server provides detailed logging for debugging

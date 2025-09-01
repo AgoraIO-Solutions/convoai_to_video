@@ -2,13 +2,14 @@ import requests
 import json
 import logging
 
-# Configuration
-API_ENDPOINT = "https://api.example.com/session/stop"  # Update with actual endpoint
-# API_ENDPOINT = "http://localhost:8080/session/stop"  # For local testing
-API_KEY = "YOUR_API_KEY"
+# Configuration for local testing
+API_ENDPOINT = "http://localhost:8764/session/stop"  # Points to mock server
+# API_ENDPOINT = "https://api.example.com/session/stop"  # For production testing
+API_KEY = "test-api-key-123"  # Matches mock server default
 
-# Example session token (in practice, this would come from session/start response)
-EXAMPLE_SESSION_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"
+# Example session data (in practice, this would come from session/start response)
+EXAMPLE_SESSION_ID = "550e8400-e29b-41d4-a716-446655440000"
+EXAMPLE_SESSION_TOKEN = "test_session_token_12345"
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
@@ -18,8 +19,9 @@ logger = logging.getLogger(__name__)
 def test_session_stop_endpoint():
     """Test the session stop DELETE endpoint"""
     
-    # Prepare test payload
+    # Prepare test payload with both session_id and session_token
     payload = {
+        "session_id": EXAMPLE_SESSION_ID,
         "session_token": EXAMPLE_SESSION_TOKEN
     }
     
@@ -64,7 +66,7 @@ def test_session_stop_endpoint():
             
     except requests.exceptions.ConnectionError as e:
         logger.error(f"❌ Connection error: {e}")
-        logger.error("Make sure the API endpoint is running and accessible")
+        logger.error("Make sure the mock server (session_test_receiver.py) is running on port 8764")
         return False
     except requests.exceptions.Timeout as e:
         logger.error(f"❌ Request timeout: {e}")
@@ -155,6 +157,7 @@ def test_invalid_api_key():
     logger.info("Testing with invalid API key...")
     
     payload = {
+        "session_id": EXAMPLE_SESSION_ID,
         "session_token": EXAMPLE_SESSION_TOKEN
     }
     
@@ -187,6 +190,7 @@ def test_missing_api_key():
     logger.info("Testing with missing API key header...")
     
     payload = {
+        "session_id": EXAMPLE_SESSION_ID,
         "session_token": EXAMPLE_SESSION_TOKEN
     }
     
@@ -213,13 +217,47 @@ def test_missing_api_key():
         return False
 
 
+def test_missing_session_id():
+    """Test the endpoint with missing session_id"""
+    logger.info("\n" + "="*50)
+    logger.info("Testing with missing session_id...")
+    
+    # Missing session_id field
+    payload = {
+        "session_token": EXAMPLE_SESSION_TOKEN
+    }
+    
+    headers = {
+        "accept": "application/json",
+        "content-type": "application/json",
+        "x-api-key": API_KEY
+    }
+    
+    try:
+        response = requests.delete(API_ENDPOINT, headers=headers, json=payload, timeout=30)
+        logger.info(f"Response status code: {response.status_code}")
+        
+        if response.status_code == 400:
+            logger.info("✅ Correctly received 400 Bad Request for missing session_id")
+            return True
+        else:
+            logger.warning(f"⚠️ Expected 400 but got {response.status_code}")
+            return False
+            
+    except Exception as e:
+        logger.error(f"❌ Error during missing session_id test: {e}")
+        return False
+
+
 def test_missing_session_token():
     """Test the endpoint with missing session_token"""
     logger.info("\n" + "="*50)
     logger.info("Testing with missing session_token...")
     
-    # Empty payload (missing session_token)
-    payload = {}
+    # Missing session_token field
+    payload = {
+        "session_id": EXAMPLE_SESSION_ID
+    }
     
     headers = {
         "accept": "application/json",
@@ -243,13 +281,14 @@ def test_missing_session_token():
         return False
 
 
-def test_invalid_session_token():
-    """Test the endpoint with invalid session_token"""
+def test_invalid_session_id():
+    """Test the endpoint with invalid session_id"""
     logger.info("\n" + "="*50)
-    logger.info("Testing with invalid session_token...")
+    logger.info("Testing with invalid session_id...")
     
     payload = {
-        "session_token": "invalid_token_that_does_not_exist"
+        "session_id": "invalid_session_id_that_does_not_exist",
+        "session_token": EXAMPLE_SESSION_TOKEN
     }
     
     headers = {
@@ -263,21 +302,23 @@ def test_invalid_session_token():
         logger.info(f"Response status code: {response.status_code}")
         
         if response.status_code == 404:
-            logger.info("✅ Correctly received 404 Not Found for invalid session_token")
+            logger.info("✅ Correctly received 404 Not Found for invalid session_id")
             return True
         else:
             logger.warning(f"⚠️ Expected 404 but got {response.status_code}")
             return False
             
     except Exception as e:
-        logger.error(f"❌ Error during invalid session_token test: {e}")
+        logger.error(f"❌ Error during invalid session_id test: {e}")
         return False
 
 
 def main():
     """Run all tests"""
     logger.info("=" * 60)
-    logger.info("SESSION STOP ENDPOINT TEST")
+    logger.info("SESSION STOP ENDPOINT TEST (LOCAL)")
+    logger.info("=" * 60)
+    logger.info("NOTE: Make sure session_test_receiver.py is running on port 8764")
     logger.info("=" * 60)
     
     # Test 1: Valid request
@@ -301,19 +342,26 @@ def main():
     
     success3 = test_missing_api_key()
     
-    # Test 4: Missing session token
+    # Test 4: Missing session_id
     logger.info("\n" + "="*50)
-    logger.info("Test 4: Missing session token")
+    logger.info("Test 4: Missing session_id")
     logger.info("="*50)
     
-    success4 = test_missing_session_token()
+    success4 = test_missing_session_id()
     
-    # Test 5: Invalid session token
+    # Test 5: Missing session token
     logger.info("\n" + "="*50)
-    logger.info("Test 5: Invalid session token")
+    logger.info("Test 5: Missing session token")
     logger.info("="*50)
     
-    success5 = test_invalid_session_token()
+    success5 = test_missing_session_token()
+    
+    # Test 6: Invalid session_id
+    logger.info("\n" + "="*50)
+    logger.info("Test 6: Invalid session_id")
+    logger.info("="*50)
+    
+    success6 = test_invalid_session_id()
     
     # Summary
     logger.info("\n" + "="*50)
@@ -323,13 +371,14 @@ def main():
     logger.info(f"Valid request test: {'✅ PASSED' if success1 else '❌ FAILED'}")
     logger.info(f"Invalid API key test: {'✅ PASSED' if success2 else '❌ FAILED'}")
     logger.info(f"Missing API key test: {'✅ PASSED' if success3 else '❌ FAILED'}")
-    logger.info(f"Missing session token test: {'✅ PASSED' if success4 else '❌ FAILED'}")
-    logger.info(f"Invalid session token test: {'✅ PASSED' if success5 else '❌ FAILED'}")
+    logger.info(f"Missing session_id test: {'✅ PASSED' if success4 else '❌ FAILED'}")
+    logger.info(f"Missing session token test: {'✅ PASSED' if success5 else '❌ FAILED'}")
+    logger.info(f"Invalid session_id test: {'✅ PASSED' if success6 else '❌ FAILED'}")
     
-    total_passed = sum([success1, success2, success3, success4, success5])
-    logger.info(f"\nOverall: {total_passed}/5 tests passed")
+    total_passed = sum([success1, success2, success3, success4, success5, success6])
+    logger.info(f"\nOverall: {total_passed}/6 tests passed")
     
-    if total_passed == 5:
+    if total_passed == 6:
         logger.info("🎉 All tests passed!")
     else:
         logger.info("⚠️ Some tests failed. Check the logs above for details.")
