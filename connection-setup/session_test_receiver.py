@@ -15,7 +15,7 @@ import socket
 
 # Configuration
 SERVER_PORT = 8764
-WEBSOCKET_PORT = 8765
+WEBSOCKET_URL = "ws://localhost:8765"  # Default to localhost for testing - edit as needed
 VALID_API_KEY = os.environ.get("TEST_API_KEY", "test-api-key-123")  # Can be set via environment variable
 
 # In-memory storage for active sessions
@@ -234,14 +234,10 @@ class SessionHandler(BaseHTTPRequestHandler):
         logger.info(f"Activity idle timeout: {activity_idle_timeout} seconds")
         logger.info(f"Active sessions count: {len(active_sessions)}")
         
-        # Get server hostname for WebSocket address
-        hostname = get_server_hostname()
-        websocket_address = f"ws://oai.agora.io:{WEBSOCKET_PORT}"
-        
-        # Return success response
+        # Return success response using the configured WebSocket URL
         response_data = {
             "session_id": session_id,
-            "websocket_address": websocket_address,
+            "websocket_address": WEBSOCKET_URL,
             "session_token": session_token
         }
         
@@ -331,7 +327,7 @@ def main():
     logger.info("=" * 60)
     logger.info(f"Starting mock server on port {SERVER_PORT}")
     logger.info(f"Server hostname: {hostname}")
-    logger.info(f"WebSocket address will be: ws://oai.agora.io:{WEBSOCKET_PORT}")
+    logger.info(f"WebSocket address will be: {WEBSOCKET_URL}")
     logger.info(f"Valid API key: {VALID_API_KEY}")
     logger.info("")
     logger.info("Available endpoints:")
