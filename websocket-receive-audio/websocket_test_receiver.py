@@ -158,15 +158,7 @@ class WebSocketTestReceiver:
                         event_id = data.get("event_id", "unknown")
                         timestamp = data.get("timestamp", 0)
                         logger.info(f"Received HEARTBEAT command from {client_id}, event_id: {event_id}, timestamp: {timestamp}")
-                        
-                        # Send heartbeat acknowledgment
-                        heartbeat_ack = {
-                            "command": "heartbeat_ack",
-                            "event_id": event_id,
-                            "timestamp": timestamp
-                        }
-                        await websocket.send(json.dumps(heartbeat_ack))
-                        logger.info(f"Sent heartbeat acknowledgment to {client_id}")
+                        # No response needed - heartbeat is just for connection keepalive
                     
                     elif command == "special":
                         # Handle special command
