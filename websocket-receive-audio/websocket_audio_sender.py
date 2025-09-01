@@ -33,27 +33,21 @@ class WebSocketAudioSender:
         
     async def connect(self):
         """Establish WebSocket connection and send initial payload"""
-        # For older websockets versions, we'll include auth in the URL or handle it differently
         try:
             logger.info(f"Connecting to WebSocket: {WEBSOCKET_ADDRESS}")
             logger.info(f"Using session token: {SESSION_TOKEN}")
             
-            # Try with additional_headers first (newer versions)
-            try:
-                headers = {"authorization": f"Bearer {SESSION_TOKEN}"}
-                self.websocket = await websockets.connect(
-                    WEBSOCKET_ADDRESS,
-                    additional_headers=headers
-                )
-                logger.info("WebSocket connected successfully (with headers)")
-            except TypeError:
-                # Fallback for older versions - connect without headers
-                logger.info("Older websockets version detected, connecting without headers...")
-                self.websocket = await websockets.connect(WEBSOCKET_ADDRESS)
-                logger.info("WebSocket connected successfully (legacy mode)")
+            # Use extra_headers for WebSocket authentication (websockets 10.4)
+            headers = {"authorization": f"Bearer {SESSION_TOKEN}"}
+            self.websocket = await websockets.connect(
+                WEBSOCKET_ADDRESS,
+                extra_headers=headers
+            )
+            logger.info("WebSocket connected successfully")
             
             payload = {
                 "command": "init",
+                "session_id": "test_session_id_12345",  # Would come from session creation in real usage
                 "avatar_id": AVATAR_ID,
                 "quality": "high",
                 "version": "v1",
@@ -65,9 +59,7 @@ class WebSocketAudioSender:
                     "channel": CHANNEL,
                     "uid": UID,
                     "enable_string_uid": ENABLE_STRING_UID
-                },
-                # Include session token in payload for older websockets versions
-                "session_token": SESSION_TOKEN
+                }
             }
             
             # Send initial configuration payload
