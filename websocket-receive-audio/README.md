@@ -39,6 +39,7 @@ The first message sent after establishing the WebSocket connection must be an in
 ```json
 {
   "command": "init",
+  "session_id": "session_12345",
   "avatar_id": "16cb73e7de08",
   "quality": "high",
   "version": "v1",
@@ -59,6 +60,7 @@ The first message sent after establishing the WebSocket connection must be an in
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | command | string | Yes | Must be set to `"init"` for initialization messages |
+| session_id | string | Yes | Session identifier received from the initial POST /session/start response. Used to link the WebSocket connection to the session. |
 | avatar_id | string | Yes | Unique identifier for the avatar to be used in the session. This ID determines which virtual avatar will be rendered and animated during the video stream. |
 | quality | string | Yes | Video quality setting for the avatar stream. Accepted values: `"low"`, `"medium"`, `"high"`. Higher quality settings provide better visual fidelity but require more bandwidth. |
 | version | string | Yes | API version identifier. Currently supports `"v1"`. This ensures compatibility between client and server implementations. |
@@ -224,7 +226,7 @@ To test the WebSocket API locally:
    ```
    This will:
    - Connect to the WebSocket server
-   - Send an `init` command with session configuration
+   - Send an `init` command with session configuration including session_id
    - Stream audio chunks from `input.wav`
    - Send a `voice_end` command when complete
 
@@ -260,7 +262,7 @@ To test against your own WebSocket server instead of the mock receiver:
 
 ### Testing Notes
 - The mock receiver expects session token `test_session_token_12345` by default
-- Tests cover essential commands: `init`, `voice`, `voice_end`, and `heartbeat`
+- Tests cover essential commands: `init` (including session_id), `voice`, `voice_end`, and `heartbeat`
 - All commands are logged with detailed information for debugging
 - Audio is saved in PCM 16-bit WAV format
-- The sender demonstrates the core message flow needed for audio streaming
+- The sender demonstrates the core message flow needed for audio streaming with proper session identification
