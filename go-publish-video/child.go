@@ -1,3 +1,5 @@
+//go:build !test
+
 package main
 
 import (
@@ -8,20 +10,14 @@ import (
 	"io"
 	"log"
 	"os"
-	"sync"
 	"time"
 
 	"go-publish-video/ipc/ipcgen"
 
 	agoraservice "github.com/AgoraIO-Extensions/Agora-Golang-Server-SDK/v2/go_sdk/rtc"
-	flatbuffers "github.com/google/flatbuffers/go"
 )
 
 var (
-	childLogger  *log.Logger
-	stdoutWriter *bufio.Writer
-	stdoutLock   sync.Mutex
-
 	// Global Agora SDK objects
 	rtcConnection     *agoraservice.RtcConnection
 	initWidth         int32
@@ -123,12 +119,12 @@ func onTokenPrivilegeDidExpire(conn *agoraservice.RtcConnection) {
 
 func cleanupLocalRtcResources(releaseConnectionObject bool) {
 	childLogger.Println("Cleaning up local Agora RTC resources...")
-	
+
 	if rtcConnection != nil {
 		// Unpublish streams
 		rtcConnection.UnpublishAudio()
 		rtcConnection.UnpublishVideo()
-		
+
 		if releaseConnectionObject {
 			childLogger.Println("Disconnecting and Releasing RtcConnection object...")
 			rtcConnection.Disconnect()
@@ -148,11 +144,11 @@ func main() {
 	originalStdout := os.Stdout
 	devNull, _ := os.OpenFile("/dev/null", os.O_WRONLY, 0)
 	os.Stdout = devNull
-	
+
 	// Set up logging to stderr
 	childLogger = log.New(os.Stderr, "[agora_worker] ", log.LstdFlags|log.Lshortfile)
 	childLogger.Println("Agora child process started.")
-	
+
 	// Use the original stdout for IPC communication
 	stdoutWriter = bufio.NewWriter(originalStdout)
 
@@ -192,7 +188,7 @@ func main() {
 
 	// Add a small delay to ensure stdout redirection is complete
 	time.Sleep(100 * time.Millisecond)
-	
+
 	serviceCfg := agoraservice.NewAgoraServiceConfig()
 	serviceCfg.EnableAudioProcessor = true
 	serviceCfg.EnableVideo = true
@@ -211,23 +207,14 @@ func main() {
 	childLogger.Println("Agora SDK global Initialize() successful.")
 	defer agoraservice.Release()
 
-	// Debug: Print all codec type values
-	childLogger.Printf("DEBUG: SDK Codec type values - H264=%d, VP8=%d, AV1=%d", 
-		agoraservice.VideoCodecTypeH264, 
-		agoraservice.VideoCodecTypeVp8,
-		agoraservice.VideoCodecTypeAv1)
-
-	// Determine video codec type from flags with AV1 support
+	// Determine video codec type from flags
 	switch *videoCodecFlag {
 	case "H264":
 		initVideoCodec = agoraservice.VideoCodecTypeH264
-		childLogger.Printf("Using H264 video codec (value=%d)", initVideoCodec)
 	case "VP8":
 		initVideoCodec = agoraservice.VideoCodecTypeVp8
-		childLogger.Printf("Using VP8 video codec (value=%d)", initVideoCodec)
 	case "AV1":
 		initVideoCodec = agoraservice.VideoCodecTypeAv1
-		childLogger.Printf("Using AV1 video codec (value=%d)", initVideoCodec)
 		// AV1 typically needs higher bitrates for real-time encoding
 		if initBitrate < 1500 {
 			childLogger.Printf("INFO: Adjusting bitrate from %d to 1500 Kbps for AV1 codec", initBitrate)
@@ -243,7 +230,7 @@ func main() {
 		globalCodecName = "H264"
 	}
 
-	childLogger.Printf("DEBUG: Final selected codec: %s with enum value=%d", globalCodecName, initVideoCodec)
+	childLogger.Printf("Selected codec: %s", globalCodecName)
 
 	// Connection configuration
 	connCfg := &agoraservice.RtcConnectionConfig{
@@ -288,13 +275,13 @@ func main() {
 		OnUserLeft:                 onUserLeft,
 		OnError:                    onError,
 	}
-	
+
 	rtcConnection.RegisterObserver(observer)
 	childLogger.Println("Agora RtcConnection created and observer registered.")
 
 	// Add delay before connect to let SDK finish initialization
 	time.Sleep(200 * time.Millisecond)
-	
+
 	ret := rtcConnection.Connect(childProcessToken, globalChannel, globalUserID)
 	if ret != 0 {
 		errMsg := fmt.Sprintf("Agora RtcConnection.Connect() call failed with code: %d", ret)
@@ -304,9 +291,9 @@ func main() {
 		sendErrorResponse(ipcgen.ConnectionStatusINITIALIZED_FAILURE, errMsg, "ConnectFailed")
 		os.Exit(1)
 	}
-	childLogger.Printf("Agora RtcConnection.Connect() called for channel '%s', user '%s' with %s codec. Waiting for connection callbacks.", 
+	childLogger.Printf("Agora RtcConnection.Connect() called for channel '%s', user '%s' with %s codec. Waiting for connection callbacks.",
 		globalChannel, globalUserID, globalCodecName)
-	
+
 	// Add delay after connect to ensure no stdout pollution
 	time.Sleep(100 * time.Millisecond)
 	sendStatusResponse(ipcgen.ConnectionStatusINITIALIZED_SUCCESS, fmt.Sprintf("Connect call issued with %s codec, awaiting callback.", globalCodecName), "")
@@ -340,7 +327,7 @@ func main() {
 
 		// Parse FlatBuffer message
 		ipcMsg := ipcgen.GetRootAsIPCMessage(msgBuf, 0)
-		
+
 		// Get payload data as bytes
 		payloadLen := ipcMsg.PayloadLength()
 		if payloadLen == 0 && ipcMsg.MessageType() != ipcgen.MessageTypeCLOSE_COMMAND {
@@ -356,7 +343,7 @@ func main() {
 			}
 			continue
 		}
-		
+
 		// Extract payload bytes
 		payloadBytes := make([]byte, payloadLen)
 		for i := 0; i < payloadLen; i++ {
@@ -368,14 +355,14 @@ func main() {
 			if rtcConnection == nil {
 				continue
 			}
-			
+
 			// Parse MediaSamplePayload from payload bytes
 			samplePayload := ipcgen.GetRootAsMediaSamplePayload(payloadBytes, 0)
 			dataLen := samplePayload.DataLength()
 			if dataLen == 0 {
 				continue
 			}
-			
+
 			// Extract frame data
 			frameData := make([]byte, dataLen)
 			for i := 0; i < int(dataLen); i++ {
@@ -396,14 +383,14 @@ func main() {
 			if rtcConnection == nil {
 				continue
 			}
-			
+
 			// Parse MediaSamplePayload from payload bytes
 			samplePayload := ipcgen.GetRootAsMediaSamplePayload(payloadBytes, 0)
 			dataLen := samplePayload.DataLength()
 			if dataLen == 0 {
 				continue
 			}
-			
+
 			// Extract frame data
 			frameData := make([]byte, dataLen)
 			for i := 0; i < int(dataLen); i++ {
@@ -434,14 +421,8 @@ func setupMediaInfrastructureAndPublish(conn *agoraservice.RtcConnection) error 
 		return fmt.Errorf("RtcConnection is nil in setupMediaInfrastructureAndPublish")
 	}
 
-	// CRITICAL: Log what codec we're about to set
-	childLogger.Printf("DEBUG: About to set video encoder with codec type value: %d (0=H264, 1=VP8, 3=AV1)", initVideoCodec)
-	childLogger.Printf("DEBUG: Global codec name: %s", globalCodecName)
-
-	// Configure Video Encoder with codec-specific optimizations
-	// IMPORTANT: Using initVideoCodec variable, NOT hardcoded!
 	videoEncoderConfig := &agoraservice.VideoEncoderConfiguration{
-		CodecType:         initVideoCodec,  // THIS MUST BE THE VARIABLE, NOT HARDCODED!
+		CodecType:         initVideoCodec,
 		Width:             int(initWidth),
 		Height:            int(initHeight),
 		Framerate:         int(initFrameRate),
@@ -450,27 +431,24 @@ func setupMediaInfrastructureAndPublish(conn *agoraservice.RtcConnection) error 
 		OrientationMode:   agoraservice.OrientationModeAdaptive,
 		DegradePreference: agoraservice.DegradeMaintainBalanced,
 	}
-	
-	// DEBUG: Verify the codec type in the config
-	childLogger.Printf("DEBUG: VideoEncoderConfiguration.CodecType is set to: %d", videoEncoderConfig.CodecType)
-	
+
 	// Apply codec-specific optimizations
 	if initVideoCodec == agoraservice.VideoCodecTypeAv1 {
-		childLogger.Printf("Applying AV1-specific optimizations: bitrate=%d, minBitrate=%d", 
+		childLogger.Printf("Applying AV1-specific optimizations: bitrate=%d, minBitrate=%d",
 			videoEncoderConfig.Bitrate, videoEncoderConfig.MinBitrate)
 		// AV1 can be more CPU intensive, so we might want to limit resolution for performance
 		if initWidth > 1280 || initHeight > 720 {
 			childLogger.Println("INFO: For optimal AV1 performance, consider using 720p or lower resolution")
 		}
 	}
-	
-	childLogger.Printf("Setting video encoder configuration: Codec=%s (enum=%d), %dx%d@%dfps, Bitrate=%d-%d Kbps", 
-		globalCodecName, videoEncoderConfig.CodecType, videoEncoderConfig.Width, videoEncoderConfig.Height, 
+
+	childLogger.Printf("Setting video encoder configuration: Codec=%s (enum=%d), %dx%d@%dfps, Bitrate=%d-%d Kbps",
+		globalCodecName, videoEncoderConfig.CodecType, videoEncoderConfig.Width, videoEncoderConfig.Height,
 		videoEncoderConfig.Framerate, videoEncoderConfig.MinBitrate, videoEncoderConfig.Bitrate)
-	
+
 	ret := conn.SetVideoEncoderConfiguration(videoEncoderConfig)
 	if ret != 0 {
-		errMsg := fmt.Sprintf("failed to set video encoder configuration for %s codec (enum=%d), error code: %d", 
+		errMsg := fmt.Sprintf("failed to set video encoder configuration for %s codec (enum=%d), error code: %d",
 			globalCodecName, initVideoCodec, ret)
 		childLogger.Printf("ERROR: %s", errMsg)
 		return fmt.Errorf(errMsg)
@@ -493,7 +471,7 @@ func setupMediaInfrastructureAndPublish(conn *agoraservice.RtcConnection) error 
 	}
 	childLogger.Printf("Video published with %s codec (enum=%d).", globalCodecName, initVideoCodec)
 
-	childLogger.Printf("Media infrastructure setup completed successfully. Streaming with %s codec (enum=%d) at %dx%d@%dfps, %d-%d Kbps", 
+	childLogger.Printf("Media infrastructure setup completed successfully. Streaming with %s codec (enum=%d) at %dx%d@%dfps, %d-%d Kbps",
 		globalCodecName, initVideoCodec, initWidth, initHeight, initFrameRate, initMinBitrate, initBitrate)
 	return nil
 }
@@ -502,115 +480,4 @@ func cleanupAgoraResources() {
 	childLogger.Println("Cleaning up ALL Agora resources due to CLOSE command or fatal error...")
 	cleanupLocalRtcResources(true)
 	childLogger.Println("Full Agora resources cleanup attempt finished.")
-}
-
-func sendAsyncStatusResponse(status ipcgen.ConnectionStatus, message string, details string) {
-	stdoutLock.Lock()
-	defer stdoutLock.Unlock()
-
-	// First create the StatusResponsePayload
-	innerBuilder := flatbuffers.NewBuilder(1024)
-	msgStr := innerBuilder.CreateString(message)
-	detailsStr := innerBuilder.CreateString(details)
-
-	ipcgen.StatusResponsePayloadStart(innerBuilder)
-	ipcgen.StatusResponsePayloadAddStatus(innerBuilder, status)
-	ipcgen.StatusResponsePayloadAddErrorMessage(innerBuilder, msgStr)
-	ipcgen.StatusResponsePayloadAddAdditionalInfo(innerBuilder, detailsStr)
-	statusPayloadOffset := ipcgen.StatusResponsePayloadEnd(innerBuilder)
-	innerBuilder.Finish(statusPayloadOffset)
-	
-	// Get the serialized StatusResponsePayload bytes
-	statusPayloadBytes := innerBuilder.FinishedBytes()
-	
-	// Now create the outer IPCMessage with the StatusResponsePayload bytes as payload
-	outerBuilder := flatbuffers.NewBuilder(len(statusPayloadBytes) + 64)
-	
-	// Create payload vector for IPCMessage
-	ipcgen.IPCMessageStartPayloadVector(outerBuilder, len(statusPayloadBytes))
-	for i := len(statusPayloadBytes) - 1; i >= 0; i-- {
-		outerBuilder.PrependByte(statusPayloadBytes[i])
-	}
-	payloadOffset := outerBuilder.EndVector(len(statusPayloadBytes))
-	
-	// Create IPCMessage
-	ipcgen.IPCMessageStart(outerBuilder)
-	ipcgen.IPCMessageAddMessageType(outerBuilder, ipcgen.MessageTypeSTATUS_RESPONSE)
-	ipcgen.IPCMessageAddPayloadType(outerBuilder, ipcgen.MessagePayloadStatus)
-	ipcgen.IPCMessageAddPayload(outerBuilder, payloadOffset)
-	msg := ipcgen.IPCMessageEnd(outerBuilder)
-	outerBuilder.Finish(msg)
-
-	buf := outerBuilder.FinishedBytes()
-	sendFramedMessage(stdoutWriter, buf)
-	if err := stdoutWriter.Flush(); err != nil {
-		childLogger.Printf("ERROR flushing stdout after status response: %v", err)
-	}
-}
-
-func sendAsyncErrorResponse(statusForError ipcgen.ConnectionStatus, errMsgStr string, errorDetails string) {
-	sendAsyncStatusResponse(statusForError, errMsgStr, errorDetails)
-}
-
-func sendAsyncLogResponse(level ipcgen.LogLevel, messageStr string) {
-	stdoutLock.Lock()
-	defer stdoutLock.Unlock()
-
-	// First create the LogResponsePayload
-	innerBuilder := flatbuffers.NewBuilder(1024)
-	msgStr := innerBuilder.CreateString(messageStr)
-
-	ipcgen.LogResponsePayloadStart(innerBuilder)
-	ipcgen.LogResponsePayloadAddLevel(innerBuilder, level)
-	ipcgen.LogResponsePayloadAddMessage(innerBuilder, msgStr)
-	logPayloadOffset := ipcgen.LogResponsePayloadEnd(innerBuilder)
-	innerBuilder.Finish(logPayloadOffset)
-	
-	// Get the serialized LogResponsePayload bytes
-	logPayloadBytes := innerBuilder.FinishedBytes()
-	
-	// Now create the outer IPCMessage with the LogResponsePayload bytes as payload
-	outerBuilder := flatbuffers.NewBuilder(len(logPayloadBytes) + 64)
-	
-	// Create payload vector for IPCMessage
-	ipcgen.IPCMessageStartPayloadVector(outerBuilder, len(logPayloadBytes))
-	for i := len(logPayloadBytes) - 1; i >= 0; i-- {
-		outerBuilder.PrependByte(logPayloadBytes[i])
-	}
-	payloadOffset := outerBuilder.EndVector(len(logPayloadBytes))
-	
-	// Create IPCMessage
-	ipcgen.IPCMessageStart(outerBuilder)
-	ipcgen.IPCMessageAddMessageType(outerBuilder, ipcgen.MessageTypeLOG_RESPONSE)
-	ipcgen.IPCMessageAddPayloadType(outerBuilder, ipcgen.MessagePayloadLog)
-	ipcgen.IPCMessageAddPayload(outerBuilder, payloadOffset)
-	msg := ipcgen.IPCMessageEnd(outerBuilder)
-	outerBuilder.Finish(msg)
-
-	buf := outerBuilder.FinishedBytes()
-	sendFramedMessage(stdoutWriter, buf)
-	if err := stdoutWriter.Flush(); err != nil {
-		childLogger.Printf("ERROR flushing stdout after log response: %v", err)
-	}
-}
-
-func sendStatusResponse(status ipcgen.ConnectionStatus, errMsgStr string, addInfoStr string) {
-	sendAsyncStatusResponse(status, errMsgStr, addInfoStr)
-}
-
-func sendErrorResponse(statusForError ipcgen.ConnectionStatus, errorMessage string, errorDetails string) {
-	sendAsyncStatusResponse(statusForError, errorMessage, errorDetails)
-}
-
-func sendFramedMessage(writer *bufio.Writer, msg []byte) {
-	lenBytes := make([]byte, 4)
-	binary.BigEndian.PutUint32(lenBytes, uint32(len(msg)))
-
-	if _, err := writer.Write(lenBytes); err != nil {
-		childLogger.Printf("Failed to write message length to writer: %v", err)
-		return
-	}
-	if _, err := writer.Write(msg); err != nil {
-		childLogger.Printf("Failed to write message payload to writer: %v", err)
-	}
 }

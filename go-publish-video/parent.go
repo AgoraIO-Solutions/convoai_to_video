@@ -143,7 +143,6 @@ func (p *ParentController) Start(opts *Options) error {
 				p.logger.Printf("Child successfully connected to Agora with %s codec", opts.VideoCodec)
 				return nil
 			}
-			p.logger.Printf("DEBUG: Timeout waiting for connection. isConnected=%v", connected)
 			return fmt.Errorf("timeout waiting for child to connect to Agora")
 		case <-ticker.C:
 			p.mu.Lock()
@@ -187,10 +186,8 @@ func (p *ParentController) readChildMessages() {
 
 		msgLen := binary.BigEndian.Uint32(lenBytes)
 		messageCount++
-		p.logger.Printf("DEBUG: Message #%d, length: %d bytes", messageCount, msgLen)
-		
+
 		if msgLen == 0 {
-			p.logger.Printf("DEBUG: Received 0-length message")
 			continue
 		}
 
@@ -209,51 +206,30 @@ func (p *ParentController) readChildMessages() {
 func (p *ParentController) handleChildMessage(msgBuf []byte) {
 	msg := ipcgen.GetRootAsIPCMessage(msgBuf, 0)
 	
-	// DEBUG: Log every message type
 	msgType := msg.MessageType()
-	p.logger.Printf("DEBUG: Received message type: %s (value: %d)", 
-		ipcgen.EnumNamesMessageType[msgType], msgType)
-	
+
 	switch msgType {
 	case ipcgen.MessageTypeSTATUS_RESPONSE:
-		p.logger.Printf("DEBUG: Processing STATUS_RESPONSE")
-		
-		// Get payload bytes
 		payloadLen := msg.PayloadLength()
-		p.logger.Printf("DEBUG: STATUS_RESPONSE payload length: %d", payloadLen)
-		
 		if payloadLen > 0 {
 			payloadBytes := make([]byte, payloadLen)
 			for i := 0; i < payloadLen; i++ {
 				payloadBytes[i] = byte(msg.Payload(i))
 			}
-			
-			// Parse StatusResponsePayload
+
 			status := ipcgen.GetRootAsStatusResponsePayload(payloadBytes, 0)
 			statusValue := status.Status()
-			
-			p.logger.Printf("DEBUG: Status value: %d, Expected CONNECTED value: %d", 
-				statusValue, ipcgen.ConnectionStatusCONNECTED)
-			p.logger.Printf("DEBUG: Status name: %s", 
-				ipcgen.EnumNamesConnectionStatus[statusValue])
-			
+
 			p.logger.Printf("Status: %s, Message: %s, Info: %s",
 				ipcgen.EnumNamesConnectionStatus[statusValue],
 				string(status.ErrorMessage()),
 				string(status.AdditionalInfo()))
-			
-			// Update connection state based on status
+
 			if statusValue == ipcgen.ConnectionStatusCONNECTED {
-				p.logger.Printf("DEBUG: *** CONNECTED status received! Setting isConnected = true ***")
 				p.mu.Lock()
 				p.isConnected = true
 				p.mu.Unlock()
-			} else {
-				p.logger.Printf("DEBUG: Status is %s (not CONNECTED)", 
-					ipcgen.EnumNamesConnectionStatus[statusValue])
 			}
-		} else {
-			p.logger.Printf("DEBUG: STATUS_RESPONSE has no payload!")
 		}
 		
 	case ipcgen.MessageTypeLOG_RESPONSE:
@@ -684,7 +660,7 @@ func main() {
 	fmt.Printf("View stream at: https://webdemo.agora.io/basicVideoCall/index.html\n")
 	fmt.Printf("Use App ID: %s\n", opts.AppID)
 	fmt.Printf("Join Channel: %s\n", opts.ChannelName)
-	fmt.Println("=====================================\n")
+	fmt.Println("=====================================")
 
 	// Wait for interrupt signal
 	<-sigChan
