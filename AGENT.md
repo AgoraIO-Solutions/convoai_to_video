@@ -53,6 +53,6 @@ APP_ID=<your_app_id> APP_CERT=<your_app_cert> make test-e2e
 - **Token generation**: Lives only in test tooling (`cmd/tokengen/`), not in the main publisher code. Tokens are passed to the publisher via `-token` flag by the ConvoAI platform.
 - **go.mod replace directive**: Must point to the local Agora Golang Server SDK checkout. The path differs between Linux deploy (`/home/ubuntu/`) and local Mac dev.
 - **Native SDK**: Downloaded via `bash scripts/install_agora_sdk.sh` from the Agora Golang Server SDK directory
-- **AV1 codec**: Requires Go SDK >= v2.4.10 and native SDK >= v4.4.32.164. Older versions silently fall back to H264.
+- **AV1 codec**: Requires Go SDK >= v2.4.12 and native SDK >= v4.4.32.165. No per-App-ID backend configuration needed. Older versions silently fall back to H264.
 - **IPC**: Parent/child processes communicate via FlatBuffers over stdin/stdout. Child logs go to stderr with `[agora_worker]` prefix.
 - **String vs numeric UIDs**: Controlled by `-enableStringUID` flag; must match between publisher and channel participants

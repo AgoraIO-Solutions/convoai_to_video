@@ -1,6 +1,6 @@
-# Publish Audio and Video into Agora with Golang (v2.4.11)
+# Publish Audio and Video into Agora with Golang (v2.4.12)
 
-This document guides you through setting up and publishing YUV video frames and PCM audio into an Agora channel using the Agora Golang SDK v2.4.11.
+This document guides you through setting up and publishing YUV video frames and PCM audio into an Agora channel using the Agora Golang SDK v2.4.12.
 The steps have been verified on Ubuntu 24.04 and macOS but should be compatible with other Debian/Ubuntu versions.
 ## Why Parent/Child Processes?
 
@@ -10,7 +10,7 @@ The steps have been verified on Ubuntu 24.04 and macOS but should be compatible 
 - **Thread safety** — CGo and the Agora C SDK's internal threading model are isolated from the main application, avoiding conflicts.
 - **Stability** — if the native SDK crashes, it takes down the child process, not your entire application.
 
-## Key Features (v2.4.11)
+## Key Features (v2.4.12)
 - Support for multiple video codecs: H264, VP8, and AV1
 - Simplified SDK API with direct push methods for audio/video
 - Local SDK library integration without system-wide installation
@@ -51,7 +51,7 @@ git checkout main && git pull origin main
 bash scripts/install_agora_sdk.sh
 ```
 
-> **AV1 minimum versions:** Go SDK >= v2.4.10, native SDK >= v4.4.32.164 (Feb 2026).
+> **AV1 minimum versions:** Go SDK >= v2.4.12, native SDK >= v4.4.32.165.
 > Older native SDKs silently fall back to H264 when AV1 is requested — no error is reported.
 
 ### 3. Clone and Setup This Project
@@ -170,11 +170,10 @@ Join at https://webdemo.agora.io/basicVideoCall/index.html with the App ID, chan
 - **H264**: Most widely supported, good balance of quality and performance
 - **VP8**: Open source codec, good for web compatibility
 - **AV1**: Latest generation codec, better compression but requires more CPU
-  - **Requires AV1 to be enabled on the Agora backend for your App ID** — contact Agora support to enable it
-  - Requires Go SDK >= v2.4.10 and native SDK >= v4.4.32.164
+  - Requires Go SDK >= v2.4.12 and native SDK >= v4.4.32.165
   - Recommended bitrate: 1500-2000 Kbps
   - Recommended min bitrate: 500-800 Kbps
-  - If the receiver shows H264 despite requesting AV1, check: (1) AV1 is enabled for your App ID, (2) native SDK is up to date (`bash scripts/install_agora_sdk.sh`)
+  - If the receiver shows H264 despite requesting AV1, ensure the native SDK is up to date (`bash scripts/install_agora_sdk.sh`)
 
 ## Makefile Targets
 
