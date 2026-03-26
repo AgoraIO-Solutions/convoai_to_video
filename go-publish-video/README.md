@@ -2,7 +2,13 @@
 
 This document guides you through setting up and publishing YUV video frames and PCM audio into an Agora channel using the Agora Golang SDK v2.4.11.
 The steps have been verified on Ubuntu 24.04 and macOS but should be compatible with other Debian/Ubuntu versions.
-parent.go launches a child.go in its own process and communicates with it using IPC. This ensures efficient movement of data while keeping each call in its own process for stability and threading optimisation.
+## Why Parent/Child Processes?
+
+`parent.go` launches `child.go` as a separate process and communicates with it using FlatBuffers over IPC. This design is intentional:
+
+- **Avoids SDK re-initialization issues** — the Agora C SDK does not cleanly re-initialize within the same process. By isolating it in a child process, each call simply spawns a new child rather than attempting to tear down and re-init the SDK in-process.
+- **Thread safety** — CGo and the Agora C SDK's internal threading model are isolated from the main application, avoiding conflicts.
+- **Stability** — if the native SDK crashes, it takes down the child process, not your entire application.
 
 ## Key Features (v2.4.11)
 - Support for multiple video codecs: H264, VP8, and AV1
