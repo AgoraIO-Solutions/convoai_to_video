@@ -1,143 +1,160 @@
-<svg width="1400" height="1300" xmlns="http://www.w3.org/2000/svg">
+<svg width="1400" height="1400" xmlns="http://www.w3.org/2000/svg">
   <!-- White background -->
-  <rect width="1400" height="1300" fill="white"/>
-  
+  <rect width="1400" height="1400" fill="white"/>
+
   <!-- Arrow marker definition -->
   <defs>
     <marker id="arrowhead" markerWidth="12" markerHeight="8" refX="11" refY="4" orient="auto">
       <polygon points="0 0, 12 4, 0 8" fill="#333"/>
     </marker>
   </defs>
-  
+
   <!-- Title -->
   <text x="700" y="40" text-anchor="middle" font-family="Arial, sans-serif" font-size="22" font-weight="bold" fill="#333">
     Agora ConvoAI Audio-to-Video Integration Flow
   </text>
-  
+
   <!-- Participants -->
   <!-- Agora ConvoAI -->
   <rect x="80" y="80" width="150" height="50" rx="8" fill="#e3f2fd" stroke="#1976d2" stroke-width="2"/>
   <text x="155" y="110" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#1976d2">Agora ConvoAI</text>
-  
+
   <!-- Avatar Provider (Main) -->
   <rect x="350" y="80" width="180" height="50" rx="8" fill="#f3e5f5" stroke="#7b1fa2" stroke-width="2"/>
   <text x="440" y="100" text-anchor="middle" font-family="Arial, sans-serif" font-size="13" font-weight="bold" fill="#7b1fa2">Avatar Provider</text>
-  <text x="440" y="118" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" fill="#7b1fa2">(Main Domain)</text>
-  
+  <text x="440" y="118" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" fill="#7b1fa2">(REST API)</text>
+
   <!-- Avatar Provider (WebSocket) -->
   <rect x="650" y="80" width="180" height="50" rx="8" fill="#e8f5e8" stroke="#388e3c" stroke-width="2"/>
   <text x="740" y="100" text-anchor="middle" font-family="Arial, sans-serif" font-size="13" font-weight="bold" fill="#388e3c">Avatar Provider</text>
   <text x="740" y="118" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" fill="#388e3c">(WebSocket)</text>
-  
+
   <!-- Agora Channel -->
   <rect x="950" y="80" width="150" height="50" rx="8" fill="#fff3e0" stroke="#f57c00" stroke-width="2"/>
   <text x="1025" y="110" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#f57c00">Agora Channel</text>
-  
+
   <!-- Vertical lifelines -->
-  <line x1="155" y1="130" x2="155" y2="1250" stroke="#999" stroke-width="2" stroke-dasharray="5,5"/>
-  <line x1="440" y1="130" x2="440" y2="1250" stroke="#999" stroke-width="2" stroke-dasharray="5,5"/>
-  <line x1="740" y1="130" x2="740" y2="1250" stroke="#999" stroke-width="2" stroke-dasharray="5,5"/>
-  <line x1="1025" y1="130" x2="1025" y2="1250" stroke="#999" stroke-width="2" stroke-dasharray="5,5"/>
-  
+  <line x1="155" y1="130" x2="155" y2="1350" stroke="#999" stroke-width="2" stroke-dasharray="5,5"/>
+  <line x1="440" y1="130" x2="440" y2="1350" stroke="#999" stroke-width="2" stroke-dasharray="5,5"/>
+  <line x1="740" y1="130" x2="740" y2="1350" stroke="#999" stroke-width="2" stroke-dasharray="5,5"/>
+  <line x1="1025" y1="130" x2="1025" y2="1350" stroke="#999" stroke-width="2" stroke-dasharray="5,5"/>
+
   <!-- Phase 1: Initial Connection Setup -->
   <rect x="50" y="160" width="400" height="30" rx="5" fill="#fff9c4" stroke="#f9a825" stroke-width="2"/>
-  <text x="250" y="180" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#f9a825">Initial Connection Setup</text>
-  
+  <text x="250" y="180" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#f9a825">Phase 1: Session Setup</text>
+
   <!-- POST request -->
   <line x1="155" y1="210" x2="430" y2="210" stroke="#333" stroke-width="2" marker-end="url(#arrowhead)"/>
   <text x="290" y="205" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="#333">POST /session/start</text>
   <text x="165" y="225" font-family="Arial, sans-serif" font-size="10" fill="#666">{avatar_id, quality, video_encoding,</text>
-  <text x="165" y="240" font-family="Arial, sans-serif" font-size="10" fill="#666">activity_idle_timeout, agora_settings}</text>
-  
+  <text x="165" y="240" font-family="Arial, sans-serif" font-size="10" fill="#666">activity_idle_timeout,</text>
+  <text x="165" y="255" font-family="Arial, sans-serif" font-size="10" fill="#1976d2" font-weight="bold">agora_settings: {app_id, token, channel, uid, enable_string_uid}}</text>
+
+  <!-- Note: avatar provider stores agora_settings -->
+  <rect x="445" y="225" width="160" height="35" rx="4" fill="#f3e5f5" stroke="#7b1fa2" stroke-width="1"/>
+  <text x="525" y="240" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#7b1fa2">Store agora_settings</text>
+  <text x="525" y="253" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#7b1fa2">for publishing later</text>
+
   <!-- Response -->
-  <line x1="430" y1="270" x2="165" y2="270" stroke="#333" stroke-width="2" marker-end="url(#arrowhead)" stroke-dasharray="4,4"/>
-  <text x="295" y="265" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="#333">Response</text>
-  <text x="165" y="285" font-family="Arial, sans-serif" font-size="10" fill="#666">{session_id, websocket_address, session_token}</text>
-  
+  <line x1="430" y1="290" x2="165" y2="290" stroke="#333" stroke-width="2" marker-end="url(#arrowhead)" stroke-dasharray="4,4"/>
+  <text x="295" y="285" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="#333">Response</text>
+  <text x="165" y="305" font-family="Arial, sans-serif" font-size="10" fill="#666">{session_id, websocket_address, session_token}</text>
+
   <!-- Phase 2: WebSocket Connection -->
-  <rect x="50" y="310" width="400" height="30" rx="5" fill="#fff9c4" stroke="#f9a825" stroke-width="2"/>
-  <text x="250" y="330" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#f9a825">WebSocket Connection</text>
-  
+  <rect x="50" y="330" width="400" height="30" rx="5" fill="#fff9c4" stroke="#f9a825" stroke-width="2"/>
+  <text x="250" y="350" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#f9a825">Phase 2: WebSocket Connection</text>
+
   <!-- WebSocket connect -->
-  <line x1="155" y1="360" x2="730" y2="360" stroke="#333" stroke-width="2" marker-end="url(#arrowhead)"/>
-  <text x="440" y="355" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="#333">Connect to websocket_address</text>
-  <text x="165" y="375" font-family="Arial, sans-serif" font-size="10" fill="#666">Authorization: Bearer {session_token}</text>
-  
+  <line x1="155" y1="380" x2="730" y2="380" stroke="#333" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <text x="440" y="375" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="#333">Connect to websocket_address</text>
+  <text x="165" y="395" font-family="Arial, sans-serif" font-size="10" fill="#666">Authorization: Bearer {session_token}</text>
+
   <!-- Connection established -->
-  <line x1="730" y1="400" x2="165" y2="400" stroke="#333" stroke-width="2" marker-end="url(#arrowhead)" stroke-dasharray="4,4"/>
-  <text x="445" y="395" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="#333">Connection Established</text>
-  
+  <line x1="730" y1="420" x2="165" y2="420" stroke="#333" stroke-width="2" marker-end="url(#arrowhead)" stroke-dasharray="4,4"/>
+  <text x="445" y="415" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="#333">Connection Established</text>
+
   <!-- Init command -->
-  <line x1="155" y1="430" x2="730" y2="430" stroke="#333" stroke-width="2" marker-end="url(#arrowhead)"/>
-  <text x="440" y="425" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="#333">Init Command</text>
-  <text x="165" y="445" font-family="Arial, sans-serif" font-size="10" fill="#666">{command: "init", session_id, avatar_id, quality,</text>
-  <text x="165" y="460" font-family="Arial, sans-serif" font-size="10" fill="#666">activity_idle_timeout, agora_settings}</text>
-  
+  <line x1="155" y1="450" x2="730" y2="450" stroke="#333" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <text x="440" y="445" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="#333">Init Command</text>
+  <text x="165" y="465" font-family="Arial, sans-serif" font-size="10" fill="#666">{command: "init", session_id, avatar_id, quality,</text>
+  <text x="165" y="480" font-family="Arial, sans-serif" font-size="10" fill="#666">activity_idle_timeout,</text>
+  <text x="165" y="495" font-family="Arial, sans-serif" font-size="10" fill="#1976d2" font-weight="bold">agora_settings: {app_id, token, channel, uid, enable_string_uid}}</text>
+
   <!-- Phase 3: Avatar Publishing -->
-  <rect x="650" y="490" width="400" height="30" rx="5" fill="#fff9c4" stroke="#f9a825" stroke-width="2"/>
-  <text x="850" y="510" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#f9a825">Avatar Publishing</text>
-  
+  <rect x="650" y="520" width="400" height="30" rx="5" fill="#fff9c4" stroke="#f9a825" stroke-width="2"/>
+  <text x="850" y="540" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#f9a825">Phase 3: Connect to Agora Channel</text>
+
+  <!-- Connect to Agora with credentials -->
+  <line x1="740" y1="570" x2="1015" y2="570" stroke="#333" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <text x="875" y="565" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="#333">Connect (Go SDK)</text>
+  <text x="750" y="585" font-family="Arial, sans-serif" font-size="10" fill="#1976d2" font-weight="bold">Initialize(app_id, enable_string_uid)</text>
+  <text x="750" y="600" font-family="Arial, sans-serif" font-size="10" fill="#1976d2" font-weight="bold">Connect(token, channel, uid)</text>
+
+  <!-- Connected -->
+  <line x1="1015" y1="620" x2="750" y2="620" stroke="#333" stroke-width="2" marker-end="url(#arrowhead)" stroke-dasharray="4,4"/>
+  <text x="880" y="615" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="#333">Connected to Channel</text>
+
   <!-- Publish avatar -->
-  <line x1="740" y1="540" x2="1015" y2="540" stroke="#333" stroke-width="2" marker-end="url(#arrowhead)"/>
-  <text x="875" y="535" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="#333">Publish Avatar Audio/Video</text>
-  <text x="750" y="555" font-family="Arial, sans-serif" font-size="10" fill="#666">(via Golang SDK)</text>
-  
+  <line x1="740" y1="650" x2="1015" y2="650" stroke="#333" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <text x="875" y="645" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="#333">Publish Avatar Audio/Video</text>
+  <text x="750" y="665" font-family="Arial, sans-serif" font-size="10" fill="#666">PushVideoFrame (YUV) + PushAudioPcmData (PCM)</text>
+
   <!-- Call metrics -->
-  <line x1="1015" y1="580" x2="750" y2="580" stroke="#333" stroke-width="2" marker-end="url(#arrowhead)" stroke-dasharray="4,4"/>
-  <text x="880" y="575" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="#333">Ongoing Call Metrics</text>
-  
+  <line x1="1015" y1="690" x2="750" y2="690" stroke="#333" stroke-width="2" marker-end="url(#arrowhead)" stroke-dasharray="4,4"/>
+  <text x="880" y="685" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="#333">Ongoing Call Metrics</text>
+
   <!-- Phase 4: Ongoing Communication -->
-  <rect x="50" y="610" width="1000" height="30" rx="5" fill="#fff9c4" stroke="#f9a825" stroke-width="2"/>
-  <text x="550" y="630" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#f9a825">Ongoing Communication</text>
-  
+  <rect x="50" y="720" width="1000" height="30" rx="5" fill="#fff9c4" stroke="#f9a825" stroke-width="2"/>
+  <text x="550" y="740" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#f9a825">Phase 4: Ongoing Audio Streaming</text>
+
   <!-- Loop box -->
-  <rect x="120" y="660" width="100" height="580" rx="5" fill="#f5f5f5" stroke="#999" stroke-width="2"/>
-  <text x="130" y="680" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="#666">Loop</text>
-  
+  <rect x="120" y="770" width="100" height="580" rx="5" fill="#f5f5f5" stroke="#999" stroke-width="2"/>
+  <text x="130" y="790" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="#666">Loop</text>
+
   <!-- Alt box -->
-  <rect x="140" y="700" width="70" height="520" rx="5" fill="#e8f5e8" stroke="#4caf50" stroke-width="2"/>
-  <text x="150" y="720" font-family="Arial, sans-serif" font-size="11" font-weight="bold" fill="#4caf50">alt</text>
-  
+  <rect x="140" y="810" width="70" height="520" rx="5" fill="#e8f5e8" stroke="#4caf50" stroke-width="2"/>
+  <text x="150" y="830" font-family="Arial, sans-serif" font-size="11" font-weight="bold" fill="#4caf50">alt</text>
+
   <!-- Voice Command -->
-  <text x="240" y="750" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="#333">[Voice Command]</text>
-  <line x1="155" y1="770" x2="730" y2="770" stroke="#333" stroke-width="2" marker-end="url(#arrowhead)"/>
-  <text x="240" y="790" font-family="Arial, sans-serif" font-size="10" fill="#666">{command: "voice",</text>
-  <text x="240" y="805" font-family="Arial, sans-serif" font-size="10" fill="#666">audio: "base64_encoded_audio",</text>
-  <text x="240" y="820" font-family="Arial, sans-serif" font-size="10" fill="#666">sampleRate: 24000,</text>
-  <text x="240" y="835" font-family="Arial, sans-serif" font-size="10" fill="#666">encoding: "PCM16", event_id: "uuid"}</text>
-  
+  <text x="240" y="860" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="#333">[Voice Command]</text>
+  <line x1="155" y1="880" x2="730" y2="880" stroke="#333" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <text x="240" y="900" font-family="Arial, sans-serif" font-size="10" fill="#666">{command: "voice",</text>
+  <text x="240" y="915" font-family="Arial, sans-serif" font-size="10" fill="#666">audio: "base64_encoded_audio",</text>
+  <text x="240" y="930" font-family="Arial, sans-serif" font-size="10" fill="#666">sampleRate: 24000,</text>
+  <text x="240" y="945" font-family="Arial, sans-serif" font-size="10" fill="#666">encoding: "PCM16", event_id: "uuid"}</text>
+
   <!-- Voice End Command -->
-  <text x="240" y="865" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="#333">[Voice End Command]</text>
-  <line x1="155" y1="885" x2="730" y2="885" stroke="#333" stroke-width="2" marker-end="url(#arrowhead)"/>
-  <text x="240" y="905" font-family="Arial, sans-serif" font-size="10" fill="#666">{command: "voice_end",</text>
-  <text x="240" y="920" font-family="Arial, sans-serif" font-size="10" fill="#666">event_id: "uuid"}</text>
-  
+  <text x="240" y="975" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="#333">[Voice End Command]</text>
+  <line x1="155" y1="995" x2="730" y2="995" stroke="#333" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <text x="240" y="1015" font-family="Arial, sans-serif" font-size="10" fill="#666">{command: "voice_end",</text>
+  <text x="240" y="1030" font-family="Arial, sans-serif" font-size="10" fill="#666">event_id: "uuid"}</text>
+
   <!-- Voice Interrupt Command -->
-  <text x="240" y="950" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="#333">[Voice Interrupt Command]</text>
-  <line x1="155" y1="970" x2="730" y2="970" stroke="#333" stroke-width="2" marker-end="url(#arrowhead)"/>
-  <text x="240" y="990" font-family="Arial, sans-serif" font-size="10" fill="#666">{command: "voice_interrupt",</text>
-  <text x="240" y="1005" font-family="Arial, sans-serif" font-size="10" fill="#666">event_id: "uuid"}</text>
-  
+  <text x="240" y="1060" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="#333">[Voice Interrupt Command]</text>
+  <line x1="155" y1="1080" x2="730" y2="1080" stroke="#333" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <text x="240" y="1100" font-family="Arial, sans-serif" font-size="10" fill="#666">{command: "voice_interrupt",</text>
+  <text x="240" y="1115" font-family="Arial, sans-serif" font-size="10" fill="#666">event_id: "uuid"}</text>
+
   <!-- Heartbeat Command -->
-  <text x="240" y="1035" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="#333">[Heartbeat Command (every 10s)]</text>
-  <line x1="155" y1="1055" x2="730" y2="1055" stroke="#333" stroke-width="2" marker-end="url(#arrowhead)"/>
-  <text x="240" y="1075" font-family="Arial, sans-serif" font-size="10" fill="#666">{command: "heartbeat",</text>
-  <text x="240" y="1090" font-family="Arial, sans-serif" font-size="10" fill="#666">event_id: "uuid", timestamp: 1673456789000}</text>
-  
+  <text x="240" y="1145" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="#333">[Heartbeat Command (every 10s)]</text>
+  <line x1="155" y1="1165" x2="730" y2="1165" stroke="#333" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <text x="240" y="1185" font-family="Arial, sans-serif" font-size="10" fill="#666">{command: "heartbeat",</text>
+  <text x="240" y="1200" font-family="Arial, sans-serif" font-size="10" fill="#666">event_id: "uuid", timestamp: 1673456789000}</text>
+
   <!-- Special Command -->
-  <text x="240" y="1120" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="#333">[Special Command]</text>
-  <line x1="155" y1="1140" x2="730" y2="1140" stroke="#333" stroke-width="2" marker-end="url(#arrowhead)"/>
-  <text x="240" y="1160" font-family="Arial, sans-serif" font-size="10" fill="#666">{command: "special",</text>
-  <text x="240" y="1175" font-family="Arial, sans-serif" font-size="10" fill="#666">content: "XML markup for avatar gestures",</text>
-  <text x="240" y="1190" font-family="Arial, sans-serif" font-size="10" fill="#666">event_id: "uuid"}</text>
-  
+  <text x="240" y="1230" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="#333">[Special Command]</text>
+  <line x1="155" y1="1250" x2="730" y2="1250" stroke="#333" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <text x="240" y="1270" font-family="Arial, sans-serif" font-size="10" fill="#666">{command: "special",</text>
+  <text x="240" y="1285" font-family="Arial, sans-serif" font-size="10" fill="#666">content: "XML markup for avatar gestures",</text>
+  <text x="240" y="1300" font-family="Arial, sans-serif" font-size="10" fill="#666">event_id: "uuid"}</text>
+
   <!-- Process command -->
-  <rect x="740" y="1210" width="170" height="50" rx="5" fill="#e3f2fd" stroke="#1976d2" stroke-width="1"/>
-  <text x="825" y="1230" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" fill="#1976d2">Process Commands and</text>
-  <text x="825" y="1245" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" fill="#1976d2">Update Avatar</text>
-  
+  <rect x="740" y="1310" width="170" height="50" rx="5" fill="#e3f2fd" stroke="#1976d2" stroke-width="1"/>
+  <text x="825" y="1330" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" fill="#1976d2">Process Commands and</text>
+  <text x="825" y="1345" text-anchor="middle" font-family="Arial, sans-serif" font-size="11" fill="#1976d2">Update Avatar</text>
+
   <!-- Update stream -->
-  <line x1="740" y1="1270" x2="1015" y2="1270" stroke="#333" stroke-width="2" marker-end="url(#arrowhead)"/>
-  <text x="875" y="1265" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="#333">Update Avatar</text>
-  <text x="875" y="1285" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="#333">Audio/Video Stream</text>
+  <line x1="740" y1="1370" x2="1015" y2="1370" stroke="#333" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <text x="875" y="1365" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="#333">Update Avatar</text>
+  <text x="875" y="1385" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="#333">Audio/Video Stream</text>
 </svg>
