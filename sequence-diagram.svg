@@ -50,11 +50,6 @@
   <text x="165" y="240" font-family="Arial, sans-serif" font-size="10" fill="#666">activity_idle_timeout,</text>
   <text x="165" y="255" font-family="Arial, sans-serif" font-size="10" fill="#1976d2" font-weight="bold">agora_settings: {app_id, token, channel, uid, enable_string_uid}}</text>
 
-  <!-- Note: avatar provider stores agora_settings -->
-  <rect x="445" y="225" width="160" height="35" rx="4" fill="#f3e5f5" stroke="#7b1fa2" stroke-width="1"/>
-  <text x="525" y="240" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#7b1fa2">Store agora_settings</text>
-  <text x="525" y="253" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#7b1fa2">for publishing later</text>
-
   <!-- Response -->
   <line x1="430" y1="290" x2="165" y2="290" stroke="#333" stroke-width="2" marker-end="url(#arrowhead)" stroke-dasharray="4,4"/>
   <text x="295" y="285" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="#333">Response</text>
