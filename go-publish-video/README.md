@@ -164,10 +164,11 @@ Join at https://webdemo.agora.io/basicVideoCall/index.html with the App ID, chan
 - **H264**: Most widely supported, good balance of quality and performance
 - **VP8**: Open source codec, good for web compatibility
 - **AV1**: Latest generation codec, better compression but requires more CPU
+  - **Requires AV1 to be enabled on the Agora backend for your App ID** — contact Agora support to enable it
   - Requires Go SDK >= v2.4.10 and native SDK >= v4.4.32.164
   - Recommended bitrate: 1500-2000 Kbps
   - Recommended min bitrate: 500-800 Kbps
-  - If the receiver shows H264 despite requesting AV1, update the native SDK (`bash scripts/install_agora_sdk.sh`)
+  - If the receiver shows H264 despite requesting AV1, check: (1) AV1 is enabled for your App ID, (2) native SDK is up to date (`bash scripts/install_agora_sdk.sh`)
 
 ## Makefile Targets
 

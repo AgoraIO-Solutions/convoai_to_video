@@ -79,6 +79,14 @@ Agora channels support two UID modes. All participants in a channel **must use t
 - The `cmd/tokengen/` tool generates the correct token type based on `-enableStringUID`
 - When in doubt, use numeric UIDs (`-enableStringUID=false`) for easier testing with the web demo
 
+## Video Codecs
+
+The Go publisher supports H264, VP8, and AV1 via the `-videoCodec` flag.
+
+- **H264** (default): Widest device and browser compatibility
+- **VP8**: Open source, good web compatibility
+- **AV1**: Best compression efficiency, but **requires your Agora App ID to have AV1 enabled on the Agora backend** — contact Agora support to enable it. Without backend enablement, the stream will silently fall back to H264. AV1 also requires Go SDK >= v2.4.10 and native SDK >= v4.4.32.164.
+
 ## Use Cases
 
 **Interactive AI Avatars**
