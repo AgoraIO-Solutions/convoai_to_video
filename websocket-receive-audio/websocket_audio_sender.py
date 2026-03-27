@@ -53,6 +53,7 @@ class WebSocketAudioSender:
                 "version": "v1",
                 "video_encoding": "H264",
                 "activity_idle_timeout": 120,
+                "area": "NORTH_AMERICA",
                 "agora_settings": {
                     "app_id": APP_ID,
                     "token": TOKEN,

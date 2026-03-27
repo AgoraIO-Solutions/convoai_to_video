@@ -4,7 +4,7 @@ This repository provides a protocol and reference implementation for **avatar pr
 
 ## How It Works
 
-1. **Agora calls your REST API** with session parameters (avatar ID, quality, Agora channel credentials)
+1. **Agora calls your REST API** with session parameters (avatar ID, quality, area, Agora channel credentials)
 2. **You return a WebSocket address** and session token
 3. **Agora streams audio** to your WebSocket — this is the AI agent's speech
 4. **You generate video** from the audio (e.g. lip-synced avatar animation)

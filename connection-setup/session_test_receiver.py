@@ -213,7 +213,18 @@ class SessionHandler(BaseHTTPRequestHandler):
                 "code": "VALIDATION_ERROR"
             })
             return
-        
+
+        # Handle area (optional field)
+        valid_areas = ["GLOBAL", "NORTH_AMERICA", "EUROPE", "ASIA", "INDIA", "JAPAN"]
+        area = request_data.get("area", "GLOBAL")
+        if area not in valid_areas:
+            self._send_json_response(400, {
+                "error": "Invalid request",
+                "message": f"Invalid area value. Must be one of: {', '.join(valid_areas)}",
+                "code": "VALIDATION_ERROR"
+            })
+            return
+
         # Generate session ID and token
         session_id = str(uuid.uuid4())
         session_token = self._generate_session_token()
@@ -224,14 +235,16 @@ class SessionHandler(BaseHTTPRequestHandler):
             "avatar_id": request_data["avatar_id"],
             "quality": request_data["quality"],
             "activity_idle_timeout": activity_idle_timeout,
+            "area": area,
             "status": "active",
             "session_id": session_id,
             "session_token": session_token  # Store token for validation in stop endpoint
         }
         active_sessions[session_id] = session_data
-        
+
         logger.info(f"Created new session with ID: {session_id}")
         logger.info(f"Activity idle timeout: {activity_idle_timeout} seconds")
+        logger.info(f"Area: {area}")
         logger.info(f"Active sessions count: {len(active_sessions)}")
         
         # Return success response using the configured WebSocket URL

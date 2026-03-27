@@ -27,6 +27,7 @@ POST /session/start
   "version": "v1",
   "video_encoding": "H264",
   "activity_idle_timeout": 120,
+  "area": "NORTH_AMERICA",
   "agora_settings": {
     "app_id": "dllkSlkdmmppollalepls",
     "token": "lkmmopplek",
@@ -52,6 +53,7 @@ POST /session/start
 | version | string | Yes | API version identifier. Currently supports `"v1"`. This ensures compatibility between client and server implementations. |
 | video_encoding | string | Yes | Video codec to be used for encoding the avatar stream. Supported values: `"H264"`, `"VP8"`, `"AV1"`. H264 provides the widest compatibility across devices and browsers. |
 | activity_idle_timeout | number | No | Session timeout in seconds after which the session will be automatically terminated if no activity is detected. Default is 120 seconds. Set to 0 to disable timeout. |
+| area | string | No | Geographic hint for avatar provider server selection. The provider can use this to route to nearby infrastructure and minimize latency. Valid values: `"GLOBAL"`, `"NORTH_AMERICA"`, `"EUROPE"`, `"ASIA"`, `"INDIA"`, `"JAPAN"`. Default is `"GLOBAL"`. |
 | agora_settings | object | Yes | Configuration object for Agora RTC (Real-Time Communication) integration. Contains all necessary parameters for establishing the video/audio channel. |
 
 ### Agora Settings Object

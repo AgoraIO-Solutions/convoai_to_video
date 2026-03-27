@@ -39,6 +39,7 @@ Full specification: [connection-setup/README.md](../../connection-setup/README.m
 
 **Key fields in the start request:**
 - `avatar_id`, `quality`, `video_encoding` — avatar and stream settings
+- `area` — geographic hint for server selection (default: `GLOBAL`)
 - `agora_settings` — App ID, token, channel, UID, enable_string_uid
 - `activity_idle_timeout` — auto-terminate after idle period
 
