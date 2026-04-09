@@ -11,7 +11,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	agoraservice "github.com/AgoraIO-Extensions/Agora-Golang-Server-SDK/v2/go_sdk/rtc"
+	agoraservice "github.com/AgoraIO-Extensions/Agora-Golang-Server-SDK/v2/go_sdk/agoraservice"
 	rtctokenbuilder "github.com/AgoraIO/Tools/DynamicKey/AgoraDynamicKey/go/src/rtctokenbuilder2"
 )
 
@@ -63,15 +63,12 @@ func main() {
 	serviceCfg.UseStringUid = enableStringUID
 	serviceCfg.LogPath = "./agora_subscriber_sdk.log"
 	serviceCfg.LogSize = 5 * 1024 * 1024
-	serviceCfg.LogLevel = 5 // Error only
-
 	if ret := agoraservice.Initialize(serviceCfg); ret != 0 {
 		logger.Fatalf("Agora SDK Initialize() failed with code: %d", ret)
 	}
 	defer agoraservice.Release()
 	logger.Println("Agora SDK initialized.")
 
-	// Connection configuration — subscribe to audio only, don't publish
 	connCfg := &agoraservice.RtcConnectionConfig{
 		AutoSubscribeAudio: true,
 		AutoSubscribeVideo: false,
@@ -144,7 +141,11 @@ func main() {
 			fmt.Printf("[subscriber] Audio track subscribed for uid: %s\n", uid)
 		},
 	}
-	conn.RegisterLocalUserObserver(localUserObserver)
+	localUser := conn.GetLocalUser()
+	if localUser == nil {
+		logger.Fatalf("GetLocalUser() returned nil")
+	}
+	localUser.RegisterLocalUserObserver(localUserObserver)
 
 	// Audio frame observer
 	audioObserver := &agoraservice.AudioFrameObserver{
@@ -158,10 +159,8 @@ func main() {
 			return true
 		},
 	}
-	conn.RegisterAudioFrameObserver(audioObserver, 0, nil)
+	localUser.RegisterAudioFrameObserver(audioObserver, 0, nil)
 
-	// Set audio frame parameters
-	localUser := conn.GetLocalUser()
 	localUser.SetPlaybackAudioFrameBeforeMixingParameters(1, 16000)
 
 	// Connect
