@@ -1,1 +1,2 @@
-See @AGENT.md for project documentation, repository structure, build instructions, and coding conventions.
+Read @AGENTS.md for AI agent instructions, git conventions, and progressive disclosure docs.
+
