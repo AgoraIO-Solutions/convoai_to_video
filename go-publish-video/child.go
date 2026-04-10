@@ -397,8 +397,13 @@ func main() {
 				frameData[i] = byte(samplePayload.Data(i))
 			}
 
-			// Push audio PCM data directly
-			rtcConnection.PushAudioPcmData(frameData, int(initSampleRate), int(initAudioChannels), 0)
+			// Propagate the parent-provided media timestamp for better A/V sync.
+			rtcConnection.PushAudioPcmData(
+				frameData,
+				int(initSampleRate),
+				int(initAudioChannels),
+				samplePayload.TimestampUnixNano()/1_000_000,
+			)
 
 		case ipcgen.MessageTypeCLOSE_COMMAND:
 			childLogger.Println("Received Close command. Cleaning up and exiting.")
