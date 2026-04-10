@@ -375,7 +375,7 @@ func main() {
 				Buffer:    frameData,
 				Stride:    int(initWidth),
 				Height:    int(initHeight),
-				Timestamp: int64(0),
+				Timestamp: samplePayload.TimestampUnixNano() / 1_000_000,
 			}
 			rtcConnection.PushVideoFrame(extFrame)
 

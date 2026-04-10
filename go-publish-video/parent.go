@@ -94,7 +94,7 @@ func (p *ParentController) Start(opts *Options) error {
 		"-audioChannels", fmt.Sprintf("%d", opts.AudioChannels),
 		"-bitrate", fmt.Sprintf("%d", opts.VideoBitrate),
 		"-minBitrate", fmt.Sprintf("%d", opts.MinVideoBitrate),
-		"-enableStringUID", fmt.Sprintf("%t", opts.EnableStringUID),
+		fmt.Sprintf("-enableStringUID=%t", opts.EnableStringUID),
 	}
 
 	p.cmd = exec.Command("./child", args...)
