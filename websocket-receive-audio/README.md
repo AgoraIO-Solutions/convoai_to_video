@@ -80,6 +80,39 @@ The first message sent after establishing the WebSocket connection must be an in
 | uid | string | Yes | User ID within the Agora channel. |
 | enable_string_uid | boolean | Yes | Determines whether the uid field should be treated as a string or numeric value. The Golang SDK for publishing back into Agora should be configured with serviceCfg.UseStringUid = enable_string_uid |
 
+#### Vendor Params Passthrough
+
+The init message accepts additional vendor-specific top-level fields beyond
+the standard fields listed above. Unknown fields are forwarded to the avatar
+provider unchanged. The same vendor-specific fields sent in the session start
+request should also be included here — the provider may be stateless between
+HTTP session setup and WebSocket connect.
+
+**Reserved (fixed schema):**
+`command`, `session_id`, `avatar_id`, `quality`, `version`, `video_encoding`,
+`activity_idle_timeout`, `area`, `agora_settings`
+
+**Passthrough (vendor-specific):**
+Any other top-level key. Vendor-specific params should be top-level, not
+nested inside `agora_settings`.
+
+Example with vendor-specific fields:
+
+```json
+{
+  "command": "init",
+  "session_id": "session_12345",
+  "avatar_id": "16cb73e7de08",
+  "quality": "high",
+  "version": "v1",
+  "video_encoding": "H264",
+  "area": "NORTH_AMERICA",
+  "model": "avatar-v3",
+  "style": "professional",
+  "agora_settings": { ... }
+}
+```
+
 ### 2. Voice Command
 
 After successful initialization, audio data can be streamed using voice commands.

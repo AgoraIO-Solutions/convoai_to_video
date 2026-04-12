@@ -187,6 +187,51 @@ DELETE /session/stop
 
 ---
 
+## Vendor Params Passthrough
+
+The start request body accepts additional vendor-specific top-level fields
+beyond the standard fields listed above. Unknown fields are forwarded to the
+avatar provider unchanged and must not be rejected by the service layer as
+long as all required standard fields are present.
+
+### Reserved vs passthrough fields
+
+**Reserved (fixed schema):**
+`avatar_id`, `quality`, `version`, `video_encoding`, `activity_idle_timeout`,
+`area`, `agora_settings`
+
+**Passthrough (vendor-specific):**
+Any other top-level key is forwarded to the provider. Vendor-specific params
+should be top-level, not nested inside `agora_settings` — that object has a
+fixed schema for Agora RTC configuration only.
+
+### Example with vendor-specific fields
+
+```json
+{
+  "avatar_id": "16cb73e7de08",
+  "quality": "high",
+  "version": "v1",
+  "video_encoding": "H264",
+  "activity_idle_timeout": 120,
+  "area": "NORTH_AMERICA",
+  "model": "avatar-v3",
+  "style": "professional",
+  "agora_settings": {
+    "app_id": "dllkSlkdmmppollalepls",
+    "token": "lkmmopplek",
+    "channel": "room1",
+    "uid": "333",
+    "enable_string_uid": false
+  }
+}
+```
+
+In this example, `model` and `style` are vendor-specific fields that the
+service layer forwards to the provider without modification.
+
+---
+
 ## Security Notes
 - The API key is now passed in the `x-api-key` header instead of the request body for better security
 - This prevents the API key from being logged in request bodies or appearing in URL parameters

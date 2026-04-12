@@ -151,10 +151,12 @@ class SessionHandler(BaseHTTPRequestHandler):
         
         logger.info(f"Request data: {json.dumps(request_data, indent=2)}")
         
-        # Validate required fields
+        # Validate required fields only. Extra top-level fields (vendor-specific
+        # passthrough params such as "model", "style") are intentionally allowed
+        # and forwarded to the provider unchanged.
         required_fields = ["avatar_id", "quality", "version", "video_encoding", "agora_settings"]
         missing_fields = []
-        
+
         for field in required_fields:
             if field not in request_data:
                 missing_fields.append(field)

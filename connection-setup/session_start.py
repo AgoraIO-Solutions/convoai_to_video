@@ -290,6 +290,51 @@ def test_malformed_payload():
         return False
 
 
+def test_vendor_passthrough_fields():
+    """Test that extra vendor-specific top-level fields are accepted"""
+    logger.info("\n" + "="*50)
+    logger.info("Testing with vendor-specific passthrough fields...")
+
+    payload = {
+        "avatar_id": "16cb73e7de08",
+        "quality": "high",
+        "version": "v1",
+        "video_encoding": "H264",
+        "activity_idle_timeout": 120,
+        "area": "NORTH_AMERICA",
+        "model": "avatar-v3",
+        "style": "professional",
+        "agora_settings": {
+            "app_id": "dllkSlkdmmppollalepls",
+            "token": "lkmmopplek",
+            "channel": "room1",
+            "uid": "333",
+            "enable_string_uid": False
+        }
+    }
+
+    headers = {
+        "accept": "application/json",
+        "content-type": "application/json",
+        "x-api-key": API_KEY
+    }
+
+    try:
+        response = requests.post(API_ENDPOINT, headers=headers, json=payload, timeout=30)
+        logger.info(f"Response status code: {response.status_code}")
+
+        if response.status_code == 200:
+            logger.info("✅ Extra vendor fields accepted (passthrough works)")
+            return True
+        else:
+            logger.warning(f"⚠️ Expected 200 but got {response.status_code}")
+            return False
+
+    except Exception as e:
+        logger.error(f"❌ Error during vendor passthrough test: {e}")
+        return False
+
+
 def main():
     """Run all tests"""
     logger.info("=" * 60)
@@ -297,47 +342,55 @@ def main():
     logger.info("=" * 60)
     logger.info("NOTE: Make sure session_test_receiver.py is running on port 8764")
     logger.info("=" * 60)
-    
+
     # Test 1: Valid request
     logger.info("\n" + "="*50)
     logger.info("Test 1: Valid API request")
     logger.info("="*50)
-    
+
     success1 = test_session_start_endpoint()
-    
+
     # Test 2: Invalid API key
     logger.info("\n" + "="*50)
     logger.info("Test 2: Invalid API key")
     logger.info("="*50)
-    
+
     success2 = test_invalid_api_key()
-    
+
     # Test 3: Missing API key
     logger.info("\n" + "="*50)
     logger.info("Test 3: Missing API key header")
     logger.info("="*50)
-    
+
     success3 = test_missing_api_key()
-    
+
     # Test 4: Malformed payload
     logger.info("\n" + "="*50)
     logger.info("Test 4: Malformed payload")
     logger.info("="*50)
-    
+
     success4 = test_malformed_payload()
-    
+
+    # Test 5: Vendor passthrough fields
+    logger.info("\n" + "="*50)
+    logger.info("Test 5: Vendor passthrough fields")
+    logger.info("="*50)
+
+    success5 = test_vendor_passthrough_fields()
+
     # Summary
     logger.info("\n" + "="*50)
     logger.info("TEST SUMMARY")
     logger.info("="*50)
-    
+
     logger.info(f"Valid request test: {'✅ PASSED' if success1 else '❌ FAILED'}")
     logger.info(f"Invalid API key test: {'✅ PASSED' if success2 else '❌ FAILED'}")
     logger.info(f"Missing API key test: {'✅ PASSED' if success3 else '❌ FAILED'}")
     logger.info(f"Malformed payload test: {'✅ PASSED' if success4 else '❌ FAILED'}")
-    
-    total_passed = sum([success1, success2, success3, success4])
-    logger.info(f"\nOverall: {total_passed}/4 tests passed")
+    logger.info(f"Vendor passthrough test: {'✅ PASSED' if success5 else '❌ FAILED'}")
+
+    total_passed = sum([success1, success2, success3, success4, success5])
+    logger.info(f"\nOverall: {total_passed}/5 tests passed")
     
     if total_passed == 4:
         logger.info("🎉 All tests passed!")

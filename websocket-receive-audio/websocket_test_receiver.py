@@ -71,6 +71,9 @@ class WebSocketTestReceiver:
                     command = data.get("command")
                     
                     if command == "init":
+                        # Extra top-level fields (vendor-specific passthrough
+                        # params such as "model", "style") are intentionally
+                        # allowed and forwarded to the provider unchanged.
                         session_id = data.get('session_id')
                         logger.info(f"Session initialized: {client_id} ({session_id})")
                         session_initialized = True
