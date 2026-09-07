@@ -46,6 +46,7 @@ The first message sent after establishing the WebSocket connection must be an in
   "video_encoding": "H264",
   "activity_idle_timeout": 120,
   "area": "NORTH_AMERICA",
+  "agora_agent_id": "396306370FFD480A824574B3263E021E",
   "agora_settings": {
     "app_id": "dllkSlkdmmppollalepls",
     "token": "lkmmopplek",
@@ -68,6 +69,7 @@ The first message sent after establishing the WebSocket connection must be an in
 | video_encoding | string | Yes | Video codec to be used for encoding the avatar stream. Supported values: `"H264"`, `"VP8"`, `"AV1"`. H264 provides the widest compatibility across devices and browsers. |
 | activity_idle_timeout | number | No | Session timeout in seconds after which the session will be automatically terminated if no activity is detected. Default is 120 seconds. Set to 0 to disable timeout. |
 | area | string | No | Geographic hint for avatar provider server selection. The provider can use this to route to nearby infrastructure and minimize latency. Valid values: `"GLOBAL"`, `"NORTH_AMERICA"`, `"EUROPE"`, `"ASIA"`, `"INDIA"`, `"JAPAN"`. Default is `"GLOBAL"`. |
+| agora_agent_id | string | No | Identifier of the convoAI agent this session is serving, sent by the platform. Same value as in `POST /session/start`, repeated here so a WebSocket connection can be correlated on its own. It is **not** the `session_id` (that is yours) and **not** the RTC `uid`. |
 | agora_settings | object | Yes | Configuration object for Agora RTC (Real-Time Communication) integration. Contains all necessary parameters for establishing the video/audio channel. |
 
 #### Agora Settings Object
@@ -91,6 +93,12 @@ HTTP session setup and WebSocket connect.
 **Reserved (fixed schema):**
 `command`, `session_id`, `avatar_id`, `quality`, `version`, `video_encoding`,
 `activity_idle_timeout`, `area`, `agora_settings`
+
+**Platform-set:**
+`agora_agent_id` — set by the platform, always sent when available. Log it, do
+not validate it, do not require it. Platform-added fields are prefixed `agora_`
+because an unprefixed name can collide with one the provider already uses; see
+the note in `connection-setup/README.md` for a case where that broke a session.
 
 **Passthrough (vendor-specific):**
 Any other top-level key. Vendor-specific params should be top-level, not

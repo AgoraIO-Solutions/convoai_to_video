@@ -28,6 +28,7 @@ POST /session/start
   "video_encoding": "H264",
   "activity_idle_timeout": 120,
   "area": "NORTH_AMERICA",
+  "agora_agent_id": "396306370FFD480A824574B3263E021E",
   "agora_settings": {
     "app_id": "dllkSlkdmmppollalepls",
     "token": "lkmmopplek",
@@ -54,6 +55,7 @@ POST /session/start
 | video_encoding | string | Yes | Video codec to be used for encoding the avatar stream. Supported values: `"H264"`, `"VP8"`, `"AV1"`. H264 provides the widest compatibility across devices and browsers. |
 | activity_idle_timeout | number | No | Session timeout in seconds after which the session will be automatically terminated if no activity is detected. Default is 120 seconds. Set to 0 to disable timeout. |
 | area | string | No | Geographic hint for avatar provider server selection. The provider can use this to route to nearby infrastructure and minimize latency. Valid values: `"GLOBAL"`, `"NORTH_AMERICA"`, `"EUROPE"`, `"ASIA"`, `"INDIA"`, `"JAPAN"`. Default is `"GLOBAL"`. |
+| agora_agent_id | string | No | Identifier of the convoAI agent this session is serving, sent by the platform. Stable for the life of the agent, and the handle to quote when either side asks "which session was this?" — nothing else in this protocol identifies it. It is **not** the `session_id` you return (that is yours), and **not** the RTC `uid`. Providers are encouraged to log it against their own session id. |
 | agora_settings | object | Yes | Configuration object for Agora RTC (Real-Time Communication) integration. Contains all necessary parameters for establishing the video/audio channel. |
 
 ### Agora Settings Object
@@ -200,10 +202,24 @@ long as all required standard fields are present.
 `avatar_id`, `quality`, `version`, `video_encoding`, `activity_idle_timeout`,
 `area`, `agora_settings`
 
+**Platform-set:**
+`agora_agent_id` is set by the platform, not by the caller, and is always sent
+when available. Treat it as informational: log it, do not validate it, and do
+not require it.
+
 **Passthrough (vendor-specific):**
 Any other top-level key is forwarded to the provider. Vendor-specific params
 should be top-level, not nested inside `agora_settings` — that object has a
 fixed schema for Agora RTC configuration only.
+
+> **Naming, learned the hard way.** Fields the platform adds are prefixed
+> `agora_` for a reason: a provider may already use the unprefixed name for
+> something else entirely. Sending a bare `agent_id` to one provider was
+> rejected outright — `400 VALIDATION_ERROR: "Only one of agent_id,
+> agent_image_url, or agent_image_base64 can be provided"` — because that name
+> was already one of their mutually exclusive avatar sources, and the session
+> never started. Passthrough is not a safe namespace, whatever this document
+> says about unknown fields being forwarded.
 
 ### Example with vendor-specific fields
 
