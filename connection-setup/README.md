@@ -54,6 +54,9 @@ POST /session/start
 | video_encoding | string | Yes | Video codec to be used for encoding the avatar stream. Supported values: `"H264"`, `"VP8"`, `"AV1"`. H264 provides the widest compatibility across devices and browsers. |
 | activity_idle_timeout | number | No | Session timeout in seconds after which the session will be automatically terminated if no activity is detected. Default is 120 seconds. Set to 0 to disable timeout. |
 | area | string | No | Geographic hint for avatar provider server selection. The provider can use this to route to nearby infrastructure and minimize latency. Valid values: `"GLOBAL"`, `"NORTH_AMERICA"`, `"EUROPE"`, `"ASIA"`, `"INDIA"`, `"JAPAN"`. Default is `"GLOBAL"`. |
+| video_width | number | No | Desired output frame **width** in pixels. Optional size hint; providers honor it where their renderer allows, otherwise ignore it. Send together with `video_height`. |
+| video_height | number | No | Desired output frame **height** in pixels. Paired with `video_width`. |
+| aspect_ratio | string | No | Desired output **aspect ratio** as `"W:H"` (e.g. `"16:9"`, `"1:1"`, `"9:16"`), used when exact `video_width`/`video_height` are not given. Optional; ignored by providers that cannot vary aspect. |
 | agora_settings | object | Yes | Configuration object for Agora RTC (Real-Time Communication) integration. Contains all necessary parameters for establishing the video/audio channel. |
 
 ### Agora Settings Object
@@ -187,6 +190,20 @@ DELETE /session/stop
 
 ---
 
+## Video Dimensions (Optional)
+
+An optional, backward-compatible way to request the output size. All fields are
+**optional** — omitting them preserves each provider's current default behavior, so
+existing implementations are unaffected.
+
+- `video_width` + `video_height` (numbers, px) — an exact size request. Send both.
+- `aspect_ratio` (string `"W:H"`, e.g. `"16:9"`, `"1:1"`, `"9:16"`) — a shape request
+  when an exact pixel size isn't needed. Ignored if `video_width`/`video_height` are set.
+
+Providers honor these where their renderer allows and otherwise ignore them (a provider
+with a single fixed output size may ignore them entirely). `quality`
+(`low`/`medium`/`high`) is unrelated — it controls bitrate/fidelity, not size.
+
 ## Vendor Params Passthrough
 
 The start request body accepts additional vendor-specific top-level fields
@@ -198,7 +215,7 @@ long as all required standard fields are present.
 
 **Reserved (fixed schema):**
 `avatar_id`, `quality`, `version`, `video_encoding`, `activity_idle_timeout`,
-`area`, `agora_settings`
+`area`, `video_width`, `video_height`, `aspect_ratio`, `agora_settings`
 
 **Passthrough (vendor-specific):**
 Any other top-level key is forwarded to the provider. Vendor-specific params

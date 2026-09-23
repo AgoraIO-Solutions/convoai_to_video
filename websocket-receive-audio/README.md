@@ -68,6 +68,8 @@ The first message sent after establishing the WebSocket connection must be an in
 | video_encoding | string | Yes | Video codec to be used for encoding the avatar stream. Supported values: `"H264"`, `"VP8"`, `"AV1"`. H264 provides the widest compatibility across devices and browsers. |
 | activity_idle_timeout | number | No | Session timeout in seconds after which the session will be automatically terminated if no activity is detected. Default is 120 seconds. Set to 0 to disable timeout. |
 | area | string | No | Geographic hint for avatar provider server selection. The provider can use this to route to nearby infrastructure and minimize latency. Valid values: `"GLOBAL"`, `"NORTH_AMERICA"`, `"EUROPE"`, `"ASIA"`, `"INDIA"`, `"JAPAN"`. Default is `"GLOBAL"`. |
+| video_width / video_height | number | No | Optional output size request in pixels; send the **same** values as in `POST /session/start`. See [Video Dimensions](../connection-setup/README.md#video-dimensions-optional). |
+| aspect_ratio | string | No | Optional shape request (`"W:H"`) used when exact width/height are not given; send the **same** value as in `/session/start`. |
 | agora_settings | object | Yes | Configuration object for Agora RTC (Real-Time Communication) integration. Contains all necessary parameters for establishing the video/audio channel. |
 
 #### Agora Settings Object
@@ -90,7 +92,8 @@ HTTP session setup and WebSocket connect.
 
 **Reserved (fixed schema):**
 `command`, `session_id`, `avatar_id`, `quality`, `version`, `video_encoding`,
-`activity_idle_timeout`, `area`, `agora_settings`
+`activity_idle_timeout`, `area`, `video_width`, `video_height`, `aspect_ratio`,
+`agora_settings`
 
 **Passthrough (vendor-specific):**
 Any other top-level key. Vendor-specific params should be top-level, not
