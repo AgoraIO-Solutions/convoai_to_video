@@ -40,6 +40,7 @@
   - voice_end
   - voice_interrupt
   - heartbeat
+  - special (including avatar actions)
 
 ## WebSocket Receiver Expectations
 
@@ -48,12 +49,17 @@
 - audio chunks are appended until `voice_end`
 - `voice_interrupt` can abort the current utterance
 - heartbeats keep the session alive
+- actions use `special` with JSON encoded in its string `content` field and are sent
+  as soon as available, independently of audio playback
+- action triggers: inline LLM text, developer `speak`/RTM text, or the built-in
+  `perform_gesture` tool; see `websocket-receive-audio/README.md` for configuration
 
 ## Output Behavior In The Mock Receiver
 
 - voice data is saved to WAV files
 - sessions are tracked in memory
 - mock implementation is optimized for protocol validation, not scale
+- the mock receiver does not implement avatar action handling
 
 ## Publisher IPC
 

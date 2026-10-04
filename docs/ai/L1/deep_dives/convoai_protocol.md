@@ -22,11 +22,19 @@ Capture what the Python parts of this repo model and what they intentionally do 
   - `voice_end`
   - `voice_interrupt`
   - `heartbeat`
+  - `special` (including avatar actions)
+
+Avatar actions use `special` with a JSON string in `content`, for example
+`{"type":"action","action":"wave"}`. ConvoAI sends them as soon as available,
+independently of audio playback. Inline LLM text, developer `speak`/RTM text, and
+the built-in `perform_gesture` tool all produce the same frame. Configuration and
+examples are in `websocket-receive-audio/README.md`.
 
 ## Important Boundary
 
 - these Python components validate protocol shape
 - they do not implement the actual avatar engine
+- the reference receiver does not implement avatar action handling
 - they do not automatically pipe media into `go-publish-video/`
 
 ## Production Adaptation

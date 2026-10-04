@@ -218,7 +218,8 @@ The server may optionally respond with a heartbeat acknowledgment:
 
 ### 6. Special Command
 
-Reserved for future use to send special instructions or notifications (e.g., LLM tool calls, user talking notifications, avatar gestures).
+Sends special instructions or notifications, including avatar actions. The `content`
+format depends on the use case.
 
 #### Request Format
 
@@ -237,6 +238,43 @@ Reserved for future use to send special instructions or notifications (e.g., LLM
 | command | string | Yes | Must be set to `"special"` for special instruction messages |
 | content | string | Yes | Special instruction content. Format depends on the specific use case (XML, JSON, etc.) |
 | event_id | string | Yes | Unique identifier for this special instruction event. Should be a UUID or similar unique string for tracking purposes. |
+
+#### Avatar Actions
+
+Available in development; not yet released.
+
+ConvoAI sends actions as soon as they are available, independently of audio playback.
+Several actions in a paragraph may arrive close together, before the corresponding words
+are spoken. The avatar provider decides how overlapping animations are handled.
+
+```json
+{
+  "command": "special",
+  "content": "{\"type\":\"action\",\"action\":\"wave\"}",
+  "event_id": "cd3c81e682af4bd5a63d60be07b0b537"
+}
+```
+
+Decode the outer message, then decode the JSON string in `content`. For `type: "action"`,
+handle the gesture named by `action`. The vendor defines the gesture names; ignore unsupported
+names and document how actions overlap and stop.
+
+Actions can be triggered in three ways:
+
+- **Inline in an LLM reply:** a text LLM writes `Hello. [wave]`. Configure
+  `avatar.params.action_wrapper: "[]"`, `tts.skip_patterns: [4]`, and `tts.batch: true`
+  in the join properties, and list the vendor's names in the prompt. The bracketed action
+  is removed before text-to-speech and kept in the transcript.
+- **Inline text from a developer:** send the same syntax through the `speak` API or typed text
+  over RTM. Use the inline configuration above with `parameters.speak.batch: true`.
+  No LLM is required.
+- **The built-in gesture tool:** a text LLM or speech-to-speech model calls `perform_gesture`
+  with `{"action":"wave"}`. Configure `avatar.actions` with the vendor's names and
+  `advanced_features.enable_tools: true`. ConvoAI handles the call internally and rejects
+  names outside that list. No external tool server or inline wrapper is required.
+
+All three routes send the same frame. Avatar providers implement action handling;
+the reference receiver currently demonstrates audio and control messages only.
 
 ## Testing
 
