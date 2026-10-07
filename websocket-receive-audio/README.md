@@ -264,7 +264,9 @@ Actions can be triggered in three ways:
 - **Inline in an LLM reply:** a text LLM writes `Hello. [wave]`. Configure
   `avatar.params.action_wrapper: "[]"`, `tts.skip_patterns: [4]`, and `tts.batch: true`
   in the join properties, and list the vendor's names in the prompt. The bracketed action
-  is removed before text-to-speech and kept in the transcript.
+  is removed before text-to-speech and kept in the transcript. `tts.skip_patterns` may be
+  omitted -- declaring `action_wrapper` is enough, and the matching pattern is derived --
+  but if you do supply the list it must contain the pair, or the request is rejected.
 - **Inline text from a developer:** send the same syntax through the `speak` API or typed text
   over RTM. Use the inline configuration above with `parameters.speak.batch: true`.
   No LLM is required.
