@@ -128,6 +128,7 @@ After successful initialization, audio data can be streamed using voice commands
   "audio": "UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+LyvmASBjqT2fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+LyvmASBjqT2fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+LyvmASBjqT2fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+LyvmASBjqT2fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+LyvmASBjqT2fPNeSsFJHfH8N2QQAoUXrTp",
   "sampleRate": 24000,
   "encoding": "PCM16",
+  "segment_id": "seg-7f3a1c",
   "event_id": "550e8400-e29b-41d4-a716-446655440000"
 }
 ```
@@ -140,17 +141,20 @@ After successful initialization, audio data can be streamed using voice commands
 | audio | string | Yes | Base64-encoded audio data. The audio should be in the format specified by the `encoding` field. |
 | sampleRate | number | Yes | Sample rate of the audio data in Hz. Common values: `16000`, `24000`, `44100`, `48000` |
 | encoding | string | Yes | Audio encoding format. Supported values: `"PCM16"` (16-bit PCM), `"PCM8"` (8-bit PCM), `"OPUS"` |
+| segment_id | string | Yes | Identifies the segment this audio belongs to. Shared with its `voice_end` and any `special` bound to it. |
 | event_id | string | Yes | Unique identifier for this audio chunk. Should be a UUID or similar unique string for tracking purposes. |
 
 ### 3. Voice End Command
 
-Signals the end of current speech segment. 
+Signals that transmission of the current speech segment is complete. It is a
+boundary, not a playback instruction: it must not stop or discard audio.
 
 #### Request Format
 
 ```json
 {
   "command": "voice_end",
+  "segment_id": "seg-7f3a1c",
   "event_id": "550e8400-e29b-41d4-a716-446655440001"
 }
 ```
@@ -160,7 +164,19 @@ Signals the end of current speech segment.
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | command | string | Yes | Must be set to `"voice_end"` for end-of-speech messages |
+| segment_id | string | Yes | Identifies the segment this marker closes. Shared with its `voice` frames and any `special` bound to it. |
 | event_id | string | Yes | Unique identifier for this voice_end event. Should be a UUID or similar unique string for tracking purposes. |
+
+#### Segment Queueing
+
+A **segment** is one run of `voice` frames terminated by a `voice_end`.
+Implementations **MUST**:
+
+1. Queue segments and play them in arrival order. A `voice` frame arriving while an earlier
+   segment is playing is appended, never a signal to stop, replace, or discard.
+2. Stop playback only on `voice_interrupt`.
+
+Senders predating `segment_id` omit it; treat each `voice_end`-delimited run as one segment.
 
 ### 4. Voice Interrupt Command
 
@@ -181,6 +197,10 @@ Immediately interrupts any ongoing avatar speech.
 |-------|------|----------|-------------|
 | command | string | Yes | Must be set to `"voice_interrupt"` for interrupt messages |
 | event_id | string | Yes | Unique identifier for this interrupt event. Should be a UUID or similar unique string for tracking purposes. |
+
+**Scope.** Applies to everything buffered and playing — the segment in
+progress, every segment queued behind it, and any `special` bound to them.
+Never partial.
 
 ### 5. Heartbeat Command
 
@@ -227,6 +247,7 @@ format depends on the use case.
 {
   "command": "special",
   "content": "XML markup for avatar gestures or other special instructions",
+  "segment_id": "seg-7f3a1c",
   "event_id": "550e8400-e29b-41d4-a716-446655440005"
 }
 ```
@@ -237,20 +258,18 @@ format depends on the use case.
 |-------|------|----------|-------------|
 | command | string | Yes | Must be set to `"special"` for special instruction messages |
 | content | string | Yes | Special instruction content. Format depends on the specific use case (XML, JSON, etc.) |
+| segment_id | string | No | Binds this instruction to a segment. Absence is meaningful: act immediately. |
 | event_id | string | Yes | Unique identifier for this special instruction event. Should be a UUID or similar unique string for tracking purposes. |
 
 #### Avatar Actions
 
 Available in development; not yet released.
 
-ConvoAI sends actions as soon as they are available, independently of audio playback.
-Several actions in a paragraph may arrive close together, before the corresponding words
-are spoken. The avatar provider decides how overlapping animations are handled.
-
 ```json
 {
   "command": "special",
   "content": "{\"type\":\"action\",\"action\":\"wave\"}",
+  "segment_id": "seg-7f3a1c",
   "event_id": "cd3c81e682af4bd5a63d60be07b0b537"
 }
 ```
@@ -259,24 +278,33 @@ Decode the outer message, then decode the JSON string in `content`. For `type: "
 handle the gesture named by `action`. The vendor defines the gesture names; ignore unsupported
 names and document how actions overlap and stop.
 
-Actions can be triggered in three ways:
+**When to act:**
+
+| `segment_id` | Act |
+| --- | --- |
+| present | when that segment **begins playing** — it may be queued behind other speech |
+| absent | **immediately** |
+
+Sent between the segment's `voice` frames and its `voice_end`; the id is authoritative.
+Discarded with its segment on `voice_interrupt`. Granularity is the segment — there is no
+offset within one.
+
+Actions can be triggered in three ways. The first two belong to a specific line of speech and
+carry a `segment_id`; the third does not.
 
 - **Inline in an LLM reply:** a text LLM writes `Hello. [wave]`. Configure
-  `avatar.params.action_wrapper: "[]"`, `tts.skip_patterns: [4]`, and `tts.batch: true`
-  in the join properties, and list the vendor's names in the prompt. The bracketed action
-  is removed before text-to-speech and kept in the transcript. `tts.skip_patterns` may be
-  omitted -- declaring `action_wrapper` is enough, and the matching pattern is derived --
-  but if you do supply the list it must contain the pair, or the request is rejected.
-- **Inline text from a developer:** send the same syntax through the `speak` API or typed text
-  over RTM. Use the inline configuration above with `parameters.speak.batch: true`.
-  No LLM is required.
+  `avatar.params.action_patterns: [4]` in the join properties and list the vendor's names in
+  the prompt. Add `tts.skip_patterns: [4]` to keep the brackets out of the spoken audio; it is
+  independent and does not affect whether the action fires.
+- **Inline text from a developer:** the same syntax through the `speak` API or typed text over
+  RTM, with the same configuration. No LLM is required.
 - **The built-in gesture tool:** a text LLM or speech-to-speech model calls `perform_gesture`
-  with `{"action":"wave"}`. Configure `avatar.actions` with the vendor's names and
-  `advanced_features.enable_tools: true`. ConvoAI handles the call internally and rejects
-  names outside that list. No external tool server or inline wrapper is required.
+  with `{"action":"wave"}`. Configure `avatar.params.actions` with the vendor's names and
+  `advanced_features.enable_tools: true`. ConvoAI handles the call internally and rejects names
+  outside that list. No external tool server is required, and no `segment_id` is sent.
 
-All three routes send the same frame. Avatar providers implement action handling;
-the reference receiver currently demonstrates audio and control messages only.
+All three routes send the same frame. Avatar providers implement action handling; the reference
+receiver demonstrates audio and control messages only.
 
 ## Testing
 
@@ -341,6 +369,7 @@ To test against your own WebSocket server instead of the mock receiver:
 ### Testing Notes
 - The mock receiver expects session token `test_session_token_12345` by default
 - Tests cover essential commands: `init` (including session_id), `voice`, `voice_end`, and `heartbeat`
+- The sender scripts predate `segment_id` and do not send it; a receiver must still treat each `voice_end`-delimited run as one segment
 - All commands are logged with detailed information for debugging
 - Audio is saved in PCM 16-bit WAV format
 - The sender demonstrates the core message flow needed for audio streaming with proper session identification
