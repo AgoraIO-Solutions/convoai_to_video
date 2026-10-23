@@ -167,19 +167,16 @@ boundary, not a playback instruction: it must not stop or discard audio.
 | segment_id | string | Yes | Identifies the segment this marker closes. Shared with its `voice` frames and any `special` bound to it. |
 | event_id | string | Yes | Unique identifier for this voice_end event. Should be a UUID or similar unique string for tracking purposes. |
 
-### 3a. Segment Queueing
+#### Segment Queueing
 
 A **segment** is one run of `voice` frames terminated by a `voice_end`.
-
 Implementations **MUST**:
 
-1. Queue segments and play them in arrival order. A `voice` frame arriving
-   while an earlier segment is playing is appended, never a signal to stop,
-   replace, or discard.
+1. Queue segments and play them in arrival order. A `voice` frame arriving while an earlier
+   segment is playing is appended, never a signal to stop, replace, or discard.
 2. Stop playback only on `voice_interrupt`.
 
-`segment_id` is required on `voice` and `voice_end`. Senders predating it omit
-it; treat each `voice_end`-delimited run as one segment.
+Senders predating `segment_id` omit it; treat each `voice_end`-delimited run as one segment.
 
 ### 4. Voice Interrupt Command
 
@@ -264,16 +261,50 @@ format depends on the use case.
 | segment_id | string | No | Binds this instruction to a segment. Absence is meaningful: act immediately. |
 | event_id | string | Yes | Unique identifier for this special instruction event. Should be a UUID or similar unique string for tracking purposes. |
 
-#### Timing
+#### Avatar Actions
+
+Available in development; not yet released.
+
+```json
+{
+  "command": "special",
+  "content": "{\"type\":\"action\",\"action\":\"wave\"}",
+  "segment_id": "seg-7f3a1c",
+  "event_id": "cd3c81e682af4bd5a63d60be07b0b537"
+}
+```
+
+Decode the outer message, then decode the JSON string in `content`. For `type: "action"`,
+handle the gesture named by `action`. The vendor defines the gesture names; ignore unsupported
+names and document how actions overlap and stop.
+
+**When to act:**
 
 | `segment_id` | Act |
 | --- | --- |
 | present | when that segment **begins playing** — it may be queued behind other speech |
 | absent | **immediately** |
 
-Sent between the segment's `voice` frames and its `voice_end`; the id is
-authoritative. Discarded with its segment on `voice_interrupt`. Granularity is
-the segment — there is no offset within one.
+Sent between the segment's `voice` frames and its `voice_end`; the id is authoritative.
+Discarded with its segment on `voice_interrupt`. Granularity is the segment — there is no
+offset within one.
+
+Actions can be triggered in three ways. The first two belong to a specific line of speech and
+carry a `segment_id`; the third does not.
+
+- **Inline in an LLM reply:** a text LLM writes `Hello. [wave]`. Configure
+  `avatar.params.action_patterns: [4]` in the join properties and list the vendor's names in
+  the prompt. Add `tts.skip_patterns: [4]` to keep the brackets out of the spoken audio; it is
+  independent and does not affect whether the action fires.
+- **Inline text from a developer:** the same syntax through the `speak` API or typed text over
+  RTM, with the same configuration. No LLM is required.
+- **The built-in gesture tool:** a text LLM or speech-to-speech model calls `perform_gesture`
+  with `{"action":"wave"}`. Configure `avatar.params.actions` with the vendor's names and
+  `advanced_features.enable_tools: true`. ConvoAI handles the call internally and rejects names
+  outside that list. No external tool server is required, and no `segment_id` is sent.
+
+All three routes send the same frame. Avatar providers implement action handling; the reference
+receiver demonstrates audio and control messages only.
 
 ## Testing
 
@@ -338,6 +369,7 @@ To test against your own WebSocket server instead of the mock receiver:
 ### Testing Notes
 - The mock receiver expects session token `test_session_token_12345` by default
 - Tests cover essential commands: `init` (including session_id), `voice`, `voice_end`, and `heartbeat`
+- The sender scripts predate `segment_id` and do not send it; a receiver must still treat each `voice_end`-delimited run as one segment
 - All commands are logged with detailed information for debugging
 - Audio is saved in PCM 16-bit WAV format
 - The sender demonstrates the core message flow needed for audio streaming with proper session identification
