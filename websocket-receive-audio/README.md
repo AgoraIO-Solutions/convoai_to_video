@@ -140,13 +140,13 @@ After successful initialization, audio data can be streamed using voice commands
 | audio | string | Yes | Base64-encoded audio data. The audio should be in the format specified by the `encoding` field. |
 | sampleRate | number | Yes | Sample rate of the audio data in Hz. Common values: `16000`, `24000`, `44100`, `48000` |
 | encoding | string | Yes | Audio encoding format. Supported values: `"PCM16"` (16-bit PCM), `"PCM8"` (8-bit PCM), `"OPUS"` |
-| segment_id | string | Yes | Identifies the segment this audio belongs to. Shared with the segment's `voice_end` and any `special` command bound to it. See *Migration* below for senders that predate this field. |
+| segment_id | string | Yes | Identifies the segment this audio belongs to. Shared with its `voice_end` and any `special` bound to it. |
 | event_id | string | Yes | Unique identifier for this audio chunk. Should be a UUID or similar unique string for tracking purposes. |
 
 ### 3. Voice End Command
 
-Signals that **transmission of the current speech segment is complete**. It
-says nothing about playback and must not stop or discard audio.
+Signals that transmission of the current speech segment is complete. It is a
+boundary, not a playback instruction: it must not stop or discard audio.
 
 #### Request Format
 
@@ -163,40 +163,22 @@ says nothing about playback and must not stop or discard audio.
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | command | string | Yes | Must be set to `"voice_end"` for end-of-speech messages |
-| segment_id | string | Yes | Identifies the segment this marker closes. Shared with the segment's `voice` frames and any `special` command belonging to it. See *Migration* below for senders that predate this field. |
+| segment_id | string | Yes | Identifies the segment this marker closes. Shared with its `voice` frames and any `special` bound to it. |
 | event_id | string | Yes | Unique identifier for this voice_end event. Should be a UUID or similar unique string for tracking purposes. |
 
-### 3a. Segment Queueing — REQUIRED
+### 3a. Segment Queueing
 
 A **segment** is one run of `voice` frames terminated by a `voice_end`.
 
 Implementations **MUST**:
 
-1. **Queue segments and play them in arrival order.** A `voice` frame arriving
-   while an earlier segment is still playing is appended to the queue. It is
-   **not** an instruction to stop, replace, or discard anything.
-2. **Stop playback only on `voice_interrupt`.** That is the sole command that
-   ends playback early.
-3. **Treat `voice_end` as a boundary, not a trigger.** It marks where one
-   segment ends and the next begins. Receiving it does not oblige the
-   implementation to flush, finalise early, or drop queued audio.
+1. Queue segments and play them in arrival order. A `voice` frame arriving
+   while an earlier segment is playing is appended, never a signal to stop,
+   replace, or discard.
+2. Stop playback only on `voice_interrupt`.
 
-**Why this is spelled out.** Two independent implementations were measured
-truncating an in-progress segment the moment the next segment's first `voice`
-frame arrived, with no `voice_interrupt` sent at any point. Sending one line,
-waiting four seconds so it was unambiguously mid-playback, then sending a
-second line produced the first line cut off mid-sentence. That behaviour makes
-`voice_interrupt` redundant and silently loses audio the caller sent and was
-told was accepted.
-
-A conforming implementation plays both lines in full, back to back.
-
-**Migration.** `segment_id` is required on `voice` and `voice_end` from this
-revision. Senders that predate it omit the field; a receiver must keep
-treating each run of `voice` frames terminated by a `voice_end` as one
-segment, exactly as described above. Position and id always agree, so an
-implementation can rely on whichever it has — but once ids are present it
-should prefer them, because a `special` references a segment by id.
+`segment_id` is required on `voice` and `voice_end`. Senders predating it omit
+it; treat each `voice_end`-delimited run as one segment.
 
 ### 4. Voice Interrupt Command
 
@@ -218,11 +200,9 @@ Immediately interrupts any ongoing avatar speech.
 | command | string | Yes | Must be set to `"voice_interrupt"` for interrupt messages |
 | event_id | string | Yes | Unique identifier for this interrupt event. Should be a UUID or similar unique string for tracking purposes. |
 
-**Scope.** An interrupt applies to **everything buffered and playing** — the
-segment in progress and every segment queued behind it, including any
-`special` commands bound to them. It is never partial, and it carries no
-segment reference, because the only reason an interrupt is sent is that the
-end user has started speaking, at which point all pending output is stale.
+**Scope.** Applies to everything buffered and playing — the segment in
+progress, every segment queued behind it, and any `special` bound to them.
+Never partial.
 
 ### 5. Heartbeat Command
 
@@ -279,66 +259,19 @@ format depends on the use case.
 |-------|------|----------|-------------|
 | command | string | Yes | Must be set to `"special"` for special instruction messages |
 | content | string | Yes | Special instruction content. Format depends on the specific use case (XML, JSON, etc.) |
-| segment_id | string | No | Binds this instruction to a queued segment. Optional because its **absence is meaningful**: an instruction with no segment is acted on immediately. See below. |
+| segment_id | string | No | Binds this instruction to a segment. Absence is meaningful: act immediately. |
 | event_id | string | Yes | Unique identifier for this special instruction event. Should be a UUID or similar unique string for tracking purposes. |
 
-#### Timing — when to act on a `special`
+#### Timing
 
-| `segment_id` | Meaning | Typical source |
-| --- | --- | --- |
-| **present** | Act when that segment **begins playing**, not on arrival. The instruction belongs to that speech, and the segment may be queued behind others. | A gesture written inline in the reply text, or in a `/speak` request |
-| **absent** | Act **immediately**. | A gesture the model requested as a tool call, in a real-time speech-to-speech session |
+| `segment_id` | Act |
+| --- | --- |
+| present | when that segment **begins playing** — it may be queued behind other speech |
+| absent | **immediately** |
 
-The instruction is sent between the segment's `voice` frames and its
-`voice_end`, so position carries the same meaning as the id; the id is
-authoritative if the two ever disagree.
-
-A `special` bound to a segment is discarded with that segment on
-`voice_interrupt`.
-
-**Granularity is the segment, deliberately.** There is no offset within a
-segment, and none is planned: an avatar needs lead time to start an animation
-and a gesture outlasts the word that prompted it, so word-level alignment
-would be false precision.
-
-#### Avatar Actions
-
-Available in development; not yet released.
-
-ConvoAI sends actions as soon as they are available, independently of audio playback.
-Several actions in a paragraph may arrive close together, before the corresponding words
-are spoken. The avatar provider decides how overlapping animations are handled.
-
-```json
-{
-  "command": "special",
-  "content": "{\"type\":\"action\",\"action\":\"wave\"}",
-  "event_id": "cd3c81e682af4bd5a63d60be07b0b537"
-}
-```
-
-Decode the outer message, then decode the JSON string in `content`. For `type: "action"`,
-handle the gesture named by `action`. The vendor defines the gesture names; ignore unsupported
-names and document how actions overlap and stop.
-
-Actions can be triggered in three ways:
-
-- **Inline in an LLM reply:** a text LLM writes `Hello. [wave]`. Configure
-  `avatar.params.action_wrapper: "[]"`, `tts.skip_patterns: [4]`, and `tts.batch: true`
-  in the join properties, and list the vendor's names in the prompt. The bracketed action
-  is removed before text-to-speech and kept in the transcript. `tts.skip_patterns` may be
-  omitted -- declaring `action_wrapper` is enough, and the matching pattern is derived --
-  but if you do supply the list it must contain the pair, or the request is rejected.
-- **Inline text from a developer:** send the same syntax through the `speak` API or typed text
-  over RTM. Use the inline configuration above with `parameters.speak.batch: true`.
-  No LLM is required.
-- **The built-in gesture tool:** a text LLM or speech-to-speech model calls `perform_gesture`
-  with `{"action":"wave"}`. Configure `avatar.actions` with the vendor's names and
-  `advanced_features.enable_tools: true`. ConvoAI handles the call internally and rejects
-  names outside that list. No external tool server or inline wrapper is required.
-
-All three routes send the same frame. Avatar providers implement action handling;
-the reference receiver currently demonstrates audio and control messages only.
+Sent between the segment's `voice` frames and its `voice_end`; the id is
+authoritative. Discarded with its segment on `voice_interrupt`. Granularity is
+the segment — there is no offset within one.
 
 ## Testing
 
