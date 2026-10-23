@@ -128,6 +128,7 @@ After successful initialization, audio data can be streamed using voice commands
   "audio": "UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+LyvmASBjqT2fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+LyvmASBjqT2fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+LyvmASBjqT2fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+LyvmASBjqT2fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+LyvmASBjqT2fPNeSsFJHfH8N2QQAoUXrTp",
   "sampleRate": 24000,
   "encoding": "PCM16",
+  "segment_id": "seg-7f3a1c",
   "event_id": "550e8400-e29b-41d4-a716-446655440000"
 }
 ```
@@ -249,6 +250,7 @@ format depends on the use case.
 {
   "command": "special",
   "content": "XML markup for avatar gestures or other special instructions",
+  "segment_id": "seg-7f3a1c",
   "event_id": "550e8400-e29b-41d4-a716-446655440005"
 }
 ```
