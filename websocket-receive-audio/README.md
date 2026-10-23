@@ -140,17 +140,20 @@ After successful initialization, audio data can be streamed using voice commands
 | audio | string | Yes | Base64-encoded audio data. The audio should be in the format specified by the `encoding` field. |
 | sampleRate | number | Yes | Sample rate of the audio data in Hz. Common values: `16000`, `24000`, `44100`, `48000` |
 | encoding | string | Yes | Audio encoding format. Supported values: `"PCM16"` (16-bit PCM), `"PCM8"` (8-bit PCM), `"OPUS"` |
+| segment_id | string | No | Identifies the segment this audio belongs to. Shared with the segment's `voice_end` and any `special` command bound to it. Absent on senders that predate this field. |
 | event_id | string | Yes | Unique identifier for this audio chunk. Should be a UUID or similar unique string for tracking purposes. |
 
 ### 3. Voice End Command
 
-Signals the end of current speech segment. 
+Signals that **transmission of the current speech segment is complete**. It
+says nothing about playback and must not stop or discard audio.
 
 #### Request Format
 
 ```json
 {
   "command": "voice_end",
+  "segment_id": "seg-7f3a1c",
   "event_id": "550e8400-e29b-41d4-a716-446655440001"
 }
 ```
@@ -160,7 +163,33 @@ Signals the end of current speech segment.
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | command | string | Yes | Must be set to `"voice_end"` for end-of-speech messages |
+| segment_id | string | No | Identifies the segment this marker closes. Shared with the segment's `voice` frames and any `special` command belonging to it. Absent on senders that predate this field. |
 | event_id | string | Yes | Unique identifier for this voice_end event. Should be a UUID or similar unique string for tracking purposes. |
+
+### 3a. Segment Queueing — REQUIRED
+
+A **segment** is one run of `voice` frames terminated by a `voice_end`.
+
+Implementations **MUST**:
+
+1. **Queue segments and play them in arrival order.** A `voice` frame arriving
+   while an earlier segment is still playing is appended to the queue. It is
+   **not** an instruction to stop, replace, or discard anything.
+2. **Stop playback only on `voice_interrupt`.** That is the sole command that
+   ends playback early.
+3. **Treat `voice_end` as a boundary, not a trigger.** It marks where one
+   segment ends and the next begins. Receiving it does not oblige the
+   implementation to flush, finalise early, or drop queued audio.
+
+**Why this is spelled out.** Two independent implementations were measured
+truncating an in-progress segment the moment the next segment's first `voice`
+frame arrived, with no `voice_interrupt` sent at any point. Sending one line,
+waiting four seconds so it was unambiguously mid-playback, then sending a
+second line produced the first line cut off mid-sentence. That behaviour makes
+`voice_interrupt` redundant and silently loses audio the caller sent and was
+told was accepted.
+
+A conforming implementation plays both lines in full, back to back.
 
 ### 4. Voice Interrupt Command
 
@@ -181,6 +210,12 @@ Immediately interrupts any ongoing avatar speech.
 |-------|------|----------|-------------|
 | command | string | Yes | Must be set to `"voice_interrupt"` for interrupt messages |
 | event_id | string | Yes | Unique identifier for this interrupt event. Should be a UUID or similar unique string for tracking purposes. |
+
+**Scope.** An interrupt applies to **everything buffered and playing** — the
+segment in progress and every segment queued behind it, including any
+`special` commands bound to them. It is never partial, and it carries no
+segment reference, because the only reason an interrupt is sent is that the
+end user has started speaking, at which point all pending output is stale.
 
 ### 5. Heartbeat Command
 
@@ -237,7 +272,27 @@ format depends on the use case.
 |-------|------|----------|-------------|
 | command | string | Yes | Must be set to `"special"` for special instruction messages |
 | content | string | Yes | Special instruction content. Format depends on the specific use case (XML, JSON, etc.) |
+| segment_id | string | No | Binds this instruction to a queued segment. See below. |
 | event_id | string | Yes | Unique identifier for this special instruction event. Should be a UUID or similar unique string for tracking purposes. |
+
+#### Timing — when to act on a `special`
+
+| `segment_id` | Meaning | Typical source |
+| --- | --- | --- |
+| **present** | Act when that segment **begins playing**, not on arrival. The instruction belongs to that speech, and the segment may be queued behind others. | A gesture written inline in the reply text, or in a `/speak` request |
+| **absent** | Act **immediately**. | A gesture the model requested as a tool call, in a real-time speech-to-speech session |
+
+The instruction is sent between the segment's `voice` frames and its
+`voice_end`, so position carries the same meaning as the id; the id is
+authoritative if the two ever disagree.
+
+A `special` bound to a segment is discarded with that segment on
+`voice_interrupt`.
+
+**Granularity is the segment, deliberately.** There is no offset within a
+segment, and none is planned: an avatar needs lead time to start an animation
+and a gesture outlasts the word that prompted it, so word-level alignment
+would be false precision.
 
 #### Avatar Actions
 
