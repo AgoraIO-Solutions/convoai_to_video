@@ -140,7 +140,7 @@ After successful initialization, audio data can be streamed using voice commands
 | audio | string | Yes | Base64-encoded audio data. The audio should be in the format specified by the `encoding` field. |
 | sampleRate | number | Yes | Sample rate of the audio data in Hz. Common values: `16000`, `24000`, `44100`, `48000` |
 | encoding | string | Yes | Audio encoding format. Supported values: `"PCM16"` (16-bit PCM), `"PCM8"` (8-bit PCM), `"OPUS"` |
-| segment_id | string | No | Identifies the segment this audio belongs to. Shared with the segment's `voice_end` and any `special` command bound to it. Absent on senders that predate this field. |
+| segment_id | string | Yes | Identifies the segment this audio belongs to. Shared with the segment's `voice_end` and any `special` command bound to it. See *Migration* below for senders that predate this field. |
 | event_id | string | Yes | Unique identifier for this audio chunk. Should be a UUID or similar unique string for tracking purposes. |
 
 ### 3. Voice End Command
@@ -163,7 +163,7 @@ says nothing about playback and must not stop or discard audio.
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | command | string | Yes | Must be set to `"voice_end"` for end-of-speech messages |
-| segment_id | string | No | Identifies the segment this marker closes. Shared with the segment's `voice` frames and any `special` command belonging to it. Absent on senders that predate this field. |
+| segment_id | string | Yes | Identifies the segment this marker closes. Shared with the segment's `voice` frames and any `special` command belonging to it. See *Migration* below for senders that predate this field. |
 | event_id | string | Yes | Unique identifier for this voice_end event. Should be a UUID or similar unique string for tracking purposes. |
 
 ### 3a. Segment Queueing — REQUIRED
@@ -190,6 +190,13 @@ second line produced the first line cut off mid-sentence. That behaviour makes
 told was accepted.
 
 A conforming implementation plays both lines in full, back to back.
+
+**Migration.** `segment_id` is required on `voice` and `voice_end` from this
+revision. Senders that predate it omit the field; a receiver must keep
+treating each run of `voice` frames terminated by a `voice_end` as one
+segment, exactly as described above. Position and id always agree, so an
+implementation can rely on whichever it has — but once ids are present it
+should prefer them, because a `special` references a segment by id.
 
 ### 4. Voice Interrupt Command
 
@@ -272,7 +279,7 @@ format depends on the use case.
 |-------|------|----------|-------------|
 | command | string | Yes | Must be set to `"special"` for special instruction messages |
 | content | string | Yes | Special instruction content. Format depends on the specific use case (XML, JSON, etc.) |
-| segment_id | string | No | Binds this instruction to a queued segment. See below. |
+| segment_id | string | No | Binds this instruction to a queued segment. Optional because its **absence is meaningful**: an instruction with no segment is acted on immediately. See below. |
 | event_id | string | Yes | Unique identifier for this special instruction event. Should be a UUID or similar unique string for tracking purposes. |
 
 #### Timing — when to act on a `special`
