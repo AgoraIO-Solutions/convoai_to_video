@@ -82,6 +82,7 @@
 - `SendAudioPcmData`
 - `session/start`
 - `voice_end`
+- `segment_id`
 - `heartbeat`
 
 ## Generated Or Runtime Artifacts

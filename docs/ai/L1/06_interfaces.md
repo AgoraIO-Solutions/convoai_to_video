@@ -46,11 +46,16 @@
 
 - bearer token validation happens before accepting media
 - `init` must arrive before voice frames
-- audio chunks are appended until `voice_end`
-- `voice_interrupt` can abort the current utterance
+- audio chunks are appended until `voice_end`; that run is one segment, named by the
+  `segment_id` both frames carry
+- segments are queued and played in arrival order — a `voice` frame arriving during
+  playback is appended, never a signal to stop or replace
+- `voice_interrupt` stops and discards everything buffered and playing: the segment in
+  progress, every segment queued behind it, and any `special` bound to them. Never
+  part of it
 - heartbeats keep the session alive
-- actions use `special` with JSON encoded in its string `content` field and are sent
-  as soon as available, independently of audio playback
+- actions use `special` with JSON encoded in its string `content` field; one carrying a
+  `segment_id` is acted on when that segment begins playing, one without it immediately
 - action triggers: inline LLM text, developer `speak`/RTM text, or the built-in
   `perform_gesture` tool; see `websocket-receive-audio/README.md` for configuration
 

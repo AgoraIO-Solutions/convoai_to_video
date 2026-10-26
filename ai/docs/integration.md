@@ -56,11 +56,15 @@ Full specification: [websocket-receive-audio/README.md](../../websocket-receive-
 
 **Message flow:**
 1. `init` — session configuration (avatar, quality, codec, Agora credentials)
-2. `voice` — base64-encoded audio chunks (PCM16/PCM8/OPUS)
-3. `voice_end` — marks end of a speech segment
-4. `voice_interrupt` — immediately stop current speech
+2. `voice` — base64-encoded audio chunks (PCM16/PCM8/OPUS), carrying a `segment_id`
+3. `voice_end` — ends that segment, carrying the same `segment_id`
+4. `voice_interrupt` — stop and discard everything buffered and playing, never part of it
 5. `heartbeat` — keep-alive every 10 seconds
-6. `special` — reserved for gestures, tool calls, etc.
+6. `special` — gestures and other instructions; one bound to speech carries that
+   segment's `segment_id` and is acted on when the segment begins playing
+
+Segments are queued and played in arrival order. A `voice` frame arriving while an
+earlier segment is playing is appended, not a signal to replace what is playing.
 
 Authentication: Bearer token in WebSocket connection headers.
 

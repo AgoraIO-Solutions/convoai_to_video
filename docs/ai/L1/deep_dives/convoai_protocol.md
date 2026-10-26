@@ -24,11 +24,19 @@ Capture what the Python parts of this repo model and what they intentionally do 
   - `heartbeat`
   - `special` (including avatar actions)
 
+`voice` and `voice_end` carry a `segment_id` naming the segment they belong to.
+Segments are queued and played in arrival order: a `voice` frame arriving during
+playback is appended, never a signal to stop or replace. Playback stops only on
+`voice_interrupt`, which discards everything buffered and playing.
+
 Avatar actions use `special` with a JSON string in `content`, for example
-`{"type":"action","action":"wave"}`. ConvoAI sends them as soon as available,
-independently of audio playback. Inline LLM text, developer `speak`/RTM text, and
-the built-in `perform_gesture` tool all produce the same frame. Configuration and
-examples are in `websocket-receive-audio/README.md`.
+`{"type":"action","action":"wave"}`. An action carrying a `segment_id` is acted on
+when that segment begins playing, because the segment may be queued behind other
+speech; one without it is acted on immediately. Inline LLM text and developer
+`speak`/RTM text produce an action bound to their segment; the built-in
+`perform_gesture` tool is a real-time instruction belonging to no segment, so it
+carries no id. Configuration and examples are in
+`websocket-receive-audio/README.md`.
 
 ## Important Boundary
 
