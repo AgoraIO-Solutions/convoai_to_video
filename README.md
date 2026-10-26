@@ -12,7 +12,55 @@ This repository provides a protocol and reference implementation for **avatar pr
 
 ## Architecture Flow
 
-<img src="sequence-diagram.svg" alt="Agora ConvoAI Integration Sequence Diagram" width="100%">
+```mermaid
+sequenceDiagram
+    participant C as Agora ConvoAI
+    participant R as Your REST API
+    participant W as Your WebSocket
+    participant A as Agora Channel
+
+    rect rgb(245,245,245)
+    note over C,R: 1. Session setup
+    C->>R: POST /session/start<br/>{avatar_id, quality, video_encoding,<br/>activity_idle_timeout, area,<br/>agora_agent_id, agora_settings}
+    R-->>C: {session_id, websocket_address, session_token}
+    end
+
+    rect rgb(245,245,245)
+    note over C,W: 2. WebSocket connect
+    C->>W: Connect, Authorization: Bearer {session_token}
+    C->>W: {command:"init", session_id, avatar_id, ...,<br/>agora_agent_id, agora_settings}
+    end
+
+    rect rgb(245,245,245)
+    note over W,A: 3. Join and publish
+    W->>A: Connect (Go SDK), then PushVideoFrame (I420)<br/>+ PushAudioPcmData (PCM)
+    end
+
+    rect rgb(245,245,245)
+    note over C,W: 4. Speech, as queued segments
+    loop one segment per utterance
+        C->>W: {command:"voice", audio, sampleRate,<br/>encoding, segment_id, event_id}
+        opt action bound to this segment
+            C->>W: {command:"special", content, segment_id, event_id}
+        end
+        C->>W: {command:"voice_end", segment_id, event_id}
+    end
+    note over W: queue segments, play in arrival order
+    opt cancel
+        C->>W: {command:"voice_interrupt", event_id}
+        note over W: discard everything buffered and playing
+    end
+    opt every 10s
+        C->>W: {command:"heartbeat", event_id, timestamp}
+        W-->>C: {command:"heartbeat_ack", ...}
+    end
+    end
+
+    rect rgb(245,245,245)
+    note over C,R: 5. Teardown
+    C->>R: DELETE /session/stop {session_id, session_token}
+    end
+```
 
 ## Implementation Components
 

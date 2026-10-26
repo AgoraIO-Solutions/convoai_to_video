@@ -28,6 +28,7 @@ POST /session/start
   "video_encoding": "H264",
   "activity_idle_timeout": 120,
   "area": "NORTH_AMERICA",
+  "agora_agent_id": "396306370FFD480A824574B3263E021E",
   "agora_settings": {
     "app_id": "dllkSlkdmmppollalepls",
     "token": "lkmmopplek",
@@ -54,6 +55,7 @@ POST /session/start
 | video_encoding | string | Yes | Video codec to be used for encoding the avatar stream. Supported values: `"H264"`, `"VP8"`, `"AV1"`. H264 provides the widest compatibility across devices and browsers. |
 | activity_idle_timeout | number | No | Session timeout in seconds after which the session will be automatically terminated if no activity is detected. Default is 120 seconds. Set to 0 to disable timeout. |
 | area | string | No | Geographic hint for avatar provider server selection. The provider can use this to route to nearby infrastructure and minimize latency. Valid values: `"GLOBAL"`, `"NORTH_AMERICA"`, `"EUROPE"`, `"ASIA"`, `"INDIA"`, `"JAPAN"`. Default is `"GLOBAL"`. |
+| agora_agent_id | string | No | Identifier of the convoAI agent this session is serving, sent by the platform. Stable for the life of the agent, and the handle to quote when either side asks "which session was this?" — nothing else in this protocol identifies it. It is **not** the `session_id` you return (that is yours), and **not** the RTC `uid`. Providers are encouraged to log it against their own session id. |
 | video_width | number | No | Desired output frame **width** in pixels. Optional size hint; providers honor it where their renderer allows, otherwise ignore it. Send together with `video_height`. |
 | video_height | number | No | Desired output frame **height** in pixels. Paired with `video_width`. |
 | aspect_ratio | string | No | Desired output **aspect ratio** as `"W:H"` (e.g. `"16:9"`, `"1:1"`, `"9:16"`), used when exact `video_width`/`video_height` are not given. Optional; ignored by providers that cannot vary aspect. |
@@ -217,10 +219,22 @@ long as all required standard fields are present.
 `avatar_id`, `quality`, `version`, `video_encoding`, `activity_idle_timeout`,
 `area`, `video_width`, `video_height`, `aspect_ratio`, `agora_settings`
 
+**Platform-set:**
+`agora_agent_id` is set by the platform, not by the caller, and is always sent
+when available. Treat it as informational: log it, do not validate it, and do
+not require it.
+
 **Passthrough (vendor-specific):**
 Any other top-level key is forwarded to the provider. Vendor-specific params
 should be top-level, not nested inside `agora_settings` — that object has a
 fixed schema for Agora RTC configuration only.
+
+> **Naming.** Fields the platform adds are prefixed `agora_` for a reason: an
+> unprefixed name may already mean something else in your API. A bare
+> `agent_id` has been rejected by a provider that already used that name for
+> one of its own mutually exclusive options, and the session never started.
+> Passthrough is not a safe namespace, whatever this document says about
+> unknown fields being forwarded.
 
 ### Example with vendor-specific fields
 
