@@ -238,15 +238,16 @@ The server may optionally respond with a heartbeat acknowledgment:
 
 ### 6. Special Command
 
-Sends special instructions or notifications, including avatar actions. The `content`
-format depends on the use case.
+Sends special instructions or notifications, including avatar actions. `content` is a
+string whose format depends on the instruction; avatar actions, the only use today, put a
+JSON string in it.
 
 #### Request Format
 
 ```json
 {
   "command": "special",
-  "content": "XML markup for avatar gestures or other special instructions",
+  "content": "{\"type\":\"action\",\"action\":\"wave\"}",
   "segment_id": "seg-7f3a1c",
   "event_id": "550e8400-e29b-41d4-a716-446655440005"
 }
@@ -257,7 +258,7 @@ format depends on the use case.
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | command | string | Yes | Must be set to `"special"` for special instruction messages |
-| content | string | Yes | Special instruction content. Format depends on the specific use case (XML, JSON, etc.) |
+| content | string | Yes | The instruction, as a string. For avatar actions it is a JSON string — see below. |
 | segment_id | string | No | Binds this instruction to a segment. Absence is meaningful: act immediately. |
 | event_id | string | Yes | Unique identifier for this special instruction event. Should be a UUID or similar unique string for tracking purposes. |
 
