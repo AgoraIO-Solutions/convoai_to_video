@@ -51,6 +51,10 @@ git checkout main && git pull origin main
 bash scripts/install_agora_sdk.sh
 ```
 
+> **`go.mod` carries a local `replace`** pointing the Agora SDK at an absolute
+> path on the maintainer's machine. Repoint it at your own checkout, or delete
+> the line to use the published module, before building outside that machine.
+
 > **AV1 minimum versions:** Go SDK >= v2.4.12, native SDK >= v4.4.32.165.
 > Older native SDKs silently fall back to H264 when AV1 is requested — no error is reported.
 
@@ -137,9 +141,10 @@ To manually publish and view the stream:
 PUB_TOKEN=$(./tokengen -appID <app_id> -appCert <app_cert> \
   -channelName <channel> -uid <uid> -role publisher -enableStringUID=false)
 
-# Start publisher
+# Start publisher. -enableStringUID must match the token: parent defaults to
+# true, and the token above was generated with false.
 ./parent -appID <app_id> -token "$PUB_TOKEN" \
-  -channelName <channel> -userID <uid> -videoCodec AV1
+  -channelName <channel> -userID <uid> -videoCodec AV1 -enableStringUID=false
 
 # Generate a subscriber token for the web viewer
 ./tokengen -appID <app_id> -appCert <app_cert> \

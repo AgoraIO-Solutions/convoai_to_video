@@ -9,7 +9,6 @@ import websockets
 
 # Configuration
 WEBSOCKET_PORT = 8765
-OUTPUT_WAV_FILE = "received_audio.wav"
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
@@ -63,6 +62,7 @@ class WebSocketTestReceiver:
         audio_data_buffer = []
         session_initialized = False
         current_sample_rate = 48000
+        current_encoding = "PCM16"
         
         try:
             async for message in websocket:
@@ -77,8 +77,11 @@ class WebSocketTestReceiver:
                         session_id = data.get('session_id')
                         logger.info(f"Session initialized: {client_id} ({session_id})")
                         session_initialized = True
-                        # Initialize audio file when session starts
-                        self.init_audio_file(current_sample_rate)
+                        # The WAV header is written once and cannot be revised,
+                        # so the file is created on the first `voice` frame --
+                        # that is when the real sampleRate and encoding are
+                        # known. Opening it here stamped the 48000 default on
+                        # 24 kHz audio, which plays at double speed.
                         
                     elif command == "voice":
                         if not session_initialized:
@@ -87,6 +90,7 @@ class WebSocketTestReceiver:
                         chunk_count += 1
                         sample_rate = data.get("sampleRate", 48000)
                         current_sample_rate = sample_rate
+                        current_encoding = data.get("encoding", "PCM16")
                         
                         # Log every 50 chunks to reduce verbosity
                         if chunk_count % 50 == 0:
@@ -97,7 +101,9 @@ class WebSocketTestReceiver:
                             audio_bytes = base64.b64decode(audio_base64)
                             audio_data_buffer.append(audio_bytes)
                             # Write each chunk immediately to file
-                            self.write_audio_chunk(audio_bytes, current_sample_rate)
+                            self.write_audio_chunk(
+                                audio_bytes, current_sample_rate, current_encoding
+                            )
                     
                     elif command == "voice_end":
                         logger.info(f"Voice ended: {client_id}, {len(audio_data_buffer)} chunks")
@@ -126,7 +132,7 @@ class WebSocketTestReceiver:
             
             logger.info(f"Client {client_id} disconnected. Total chunks: {chunk_count}")
     
-    def init_audio_file(self, sample_rate):
+    def init_audio_file(self, sample_rate, encoding="PCM16"):
         """Initialize a new audio file for writing"""
         try:
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -134,7 +140,9 @@ class WebSocketTestReceiver:
             
             self._audio_file = wave.open(filename, 'wb')
             self._audio_file.setnchannels(1)  # Mono
-            self._audio_file.setsampwidth(2)  # 16-bit PCM
+            # PCM8 is one byte per sample, PCM16 two. Writing everything as
+            # 16-bit turned PCM8 audio into noise.
+            self._audio_file.setsampwidth(1 if encoding == "PCM8" else 2)
             self._audio_file.setframerate(sample_rate)
             self._total_bytes = 0
             
@@ -143,11 +151,11 @@ class WebSocketTestReceiver:
         except Exception as e:
             logger.error(f"Error initializing audio file: {e}")
     
-    def write_audio_chunk(self, audio_bytes, sample_rate):
+    def write_audio_chunk(self, audio_bytes, sample_rate, encoding="PCM16"):
         """Write audio chunk directly to file"""
         try:
             if not self._audio_file:
-                self.init_audio_file(sample_rate)
+                self.init_audio_file(sample_rate, encoding)
             
             self._audio_file.writeframes(audio_bytes)
             self._total_bytes += len(audio_bytes)
@@ -155,7 +163,7 @@ class WebSocketTestReceiver:
         except Exception as e:
             logger.error(f"Error writing audio chunk: {e}")
     
-    def save_audio(self, audio_chunks, sample_rate=48000, suffix=""):
+    def save_audio(self, audio_chunks, sample_rate=48000, suffix="", encoding="PCM16"):
         """Save received audio chunks to a WAV file"""
         try:
             combined_audio = b''.join(audio_chunks)
@@ -164,7 +172,7 @@ class WebSocketTestReceiver:
             
             with wave.open(filename, 'wb') as wf:
                 wf.setnchannels(1)  # Mono
-                wf.setsampwidth(2)  # 16-bit PCM
+                wf.setsampwidth(1 if encoding == "PCM8" else 2)
                 wf.setframerate(sample_rate)
                 wf.writeframes(combined_audio)
             

@@ -41,8 +41,11 @@ run_test() {
     # Generate publisher token using tokengen
     echo "Generating publisher token..."
     local pub_token
+    # tokengen defaults -enableStringUID=true, so the numeric test was handed
+    # a string-UID token and the publisher rejected it. Pass the mode through.
     pub_token=$(./tokengen -appID "$APP_ID" -appCert "$APP_CERT" \
-        -channelName "$channel_name" -uid "$publisher_uid" -role publisher)
+        -channelName "$channel_name" -uid "$publisher_uid" -role publisher \
+        -enableStringUID="$enable_string_uid")
     echo "[test] Generated publisher token for uid=$publisher_uid"
 
     # Start publisher in background

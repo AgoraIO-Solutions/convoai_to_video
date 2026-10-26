@@ -103,10 +103,10 @@ Each component has unit tests that run without Agora credentials:
 cd go-publish-video && make test
 
 # Connection setup — session validation, mock server
-cd connection-setup && pip install -r requirements.txt -r requirements-dev.txt && pytest -v
+cd connection-setup && pip install -r requirements.txt
 
 # WebSocket — token validation, audio handling, message protocol
-cd websocket-receive-audio && pip install -r requirements.txt -r requirements-dev.txt && pytest -v
+cd websocket-receive-audio && pip install -r requirements.txt
 ```
 
 E2E tests (requires Agora App ID and App Certificate):
@@ -119,5 +119,5 @@ APP_ID=<your_app_id> APP_CERT=<your_app_cert> make test-e2e
 
 - **IPC**: Parent/child communicate via FlatBuffers over stdin/stdout
 - **String vs numeric UIDs**: Controlled by `enable_string_uid` in the init message; the Go publisher must match
-- **AV1 codec**: Requires Go SDK >= v2.4.10 and native SDK >= v4.4.32.164. Older SDKs silently fall back to H264.
+- **AV1 codec**: has minimum SDK versions — see `go-publish-video/README.md`. Older SDKs silently fall back to H264.
 - **Tokens**: Generated externally and passed to the publisher via the `-token` flag. The `cmd/tokengen/` tool is provided for testing only.

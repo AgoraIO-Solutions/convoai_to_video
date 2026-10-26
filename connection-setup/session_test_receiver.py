@@ -15,7 +15,7 @@ import socket
 
 # Configuration
 SERVER_PORT = 8764
-WEBSOCKET_URL = "ws://oai.agora.io:8765"  # Default to localhost for testing - edit as needed
+WEBSOCKET_URL = "ws://localhost:8765"  # local receiver; edit as needed
 VALID_API_KEY = os.environ.get("TEST_API_KEY", "test-api-key-123")  # Can be set via environment variable
 
 # In-memory storage for active sessions
@@ -24,6 +24,16 @@ active_sessions = {}
 # Setup logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
+
+_SECRET_HEADERS = {"x-api-key", "authorization"}
+
+
+def _redact(headers):
+    """Headers minus the secrets. A mock gets copied; copy something safe."""
+    return {
+        k: ("<redacted>" if k.lower() in _SECRET_HEADERS else v)
+        for k, v in headers.items()
+    }
 
 
 def get_server_hostname():
@@ -80,8 +90,7 @@ class SessionHandler(BaseHTTPRequestHandler):
             return False
         
         if api_key != VALID_API_KEY:
-            logger.warning(f"Invalid API key provided: {api_key}")
-            logger.info(f"Expected API key: {VALID_API_KEY}")
+            logger.warning("Invalid API key provided")
             self._send_json_response(401, {
                 "error": "Unauthorized",
                 "message": "Invalid API key",
@@ -104,7 +113,7 @@ class SessionHandler(BaseHTTPRequestHandler):
         parsed_path = urlparse(self.path)
         
         logger.info(f"POST {self.path}")
-        logger.info(f"Headers: {dict(self.headers)}")
+        logger.info(f"Headers: {_redact(dict(self.headers))}")
         
         if parsed_path.path == '/session/start':
             self.handle_session_start()

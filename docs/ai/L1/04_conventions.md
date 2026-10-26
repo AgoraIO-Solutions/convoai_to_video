@@ -48,14 +48,14 @@
 ## Media Conventions
 
 - audio sample format: PCM16 mono by default
-- workaround video input format: `RGB24`
-- SDK publish format on workaround branch: `RGBA`
+- video input format: `I420` (YUV420 planar)
+- SDK publish format: `I420` (`VideoPixelI420` / `VideoPublishTypeYuv`)
 - timestamps should be propagated from parent to child
 
 ## Conversion Conventions
 
-- file input is packed `RGB24`
-- IPC payload carries packed `RGBA`
+- file input is planar `I420`
+- IPC payload carries raw `I420` bytes
 - width, height, and bytes-per-pixel must stay in sync
 - frame timing should come from the parent sample loop, not child wall clock
 

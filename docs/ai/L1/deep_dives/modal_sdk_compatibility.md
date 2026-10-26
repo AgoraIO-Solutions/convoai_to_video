@@ -2,7 +2,10 @@
 
 ## Purpose
 
-Record the tested Linux SDK compatibility boundary for Modal/gVisor so the workaround branch does not drift.
+Record the tested Linux SDK compatibility boundary for Modal/gVisor.
+
+**Scope: the `linux_rtc_4_4_31` branch.** Master tracks Go SDK `v2.4.12`; the
+versions below are that branch's, kept so the Modal finding is not lost.
 
 ## Tested Boundary
 
@@ -19,7 +22,7 @@ Record the tested Linux SDK compatibility boundary for Modal/gVisor so the worka
 
 ## Practical Repo Rule
 
-- keep the workaround branch pinned to the `4.4.31` line
+- keep the `linux_rtc_4_4_31` branch pinned to the `4.4.31` line
 - do not upgrade the native SDK on this branch without repeating a real Modal test
 
 ## Verification Expectations

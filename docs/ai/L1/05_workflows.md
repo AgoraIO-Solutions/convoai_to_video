@@ -49,7 +49,7 @@
 ## Update The Modal Workaround Branch
 
 1. stay on branch `linux_rtc_4_4_31`
-2. keep SDK docs pinned to the `4.4.31` line
+2. keep SDK versions citing `go-publish-video/go.mod`, not a copied number
 3. verify with a real Modal run before calling the change complete
 
 ## Check The Current Publisher Path
@@ -64,7 +64,7 @@
 2. confirm `agora_sdk/` is present in `go-publish-video/`
 3. confirm `LD_LIBRARY_PATH` on Linux
 4. run a bounded local test before blaming the media loop
-5. if failure is Modal-specific, compare against the pinned `4.4.31` path
+5. if failure is Modal-specific, compare against the `linux_rtc_4_4_31` branch
 
 ## Update Progressive Disclosure Docs
 

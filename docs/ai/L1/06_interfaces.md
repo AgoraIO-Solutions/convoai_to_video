@@ -88,11 +88,10 @@
 
 ## IPC Payload Expectations
 
-- video sample must include:
-  - width
-  - height
-  - pixel buffer
-  - timestamp
+- `MediaSamplePayload` carries only `data` (raw bytes) and `timestamp_unix_nano`
+- geometry and audio format are negotiated **once** in `InitPayload`
+  (`video_width`, `video_height`, `video_fps`, `video_codec_name`,
+  `audio_sample_rate`, `audio_channels`), which parent fills from its CLI flags
 - audio sample must include:
   - sample rate
   - channel count
@@ -105,8 +104,8 @@
   - PCM16
   - default 16 kHz mono
 - video frames on workaround branch:
-  - input file format: `RGB24`
-  - sent to SDK as `RGBA`
+  - input file format: `I420`
+  - sent to SDK as `I420`
 
 ## UID / Token Contract
 

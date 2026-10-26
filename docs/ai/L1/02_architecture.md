@@ -72,10 +72,10 @@
 ## Current Media Path
 
 1. parent reads PCM audio chunks
-2. parent reads `RGB24` video frames
-3. parent packs `RGB24` into `RGBA`
+2. parent reads `I420` video frames
+3. parent reads `I420` (YUV420) frames
 4. parent sends media samples over FlatBuffers IPC
-5. child publishes PCM audio and raw `RGBA` video through Agora
+5. child publishes PCM audio and raw `I420` video through Agora
 
 ## Testing Shape
 
@@ -95,9 +95,9 @@
 
 ## Current Workaround Path
 
-- native SDK line: `4.4.31`
-- raw input: `RGB24`
-- publish format: `RGBA`
+- Go SDK: `v2.4.12`
+- raw input: `I420`
+- publish format: `I420`
 - branch target: customer workaround for Modal/gVisor compatibility
 
 ## Related Deep Dives

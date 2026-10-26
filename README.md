@@ -27,27 +27,19 @@ This repository provides a protocol and reference implementation for **avatar pr
 
 ## Testing
 
-All components have unit tests that run without Agora credentials or network access.
+There are no unit tests in this repository. `go test ./...` reports "no test
+files" and passes without checking anything. What exists is manual:
 
-### Go (IPC, message framing, codec config)
-```bash
-cd go-publish-video
-make test
-```
-
-### Python — Connection Setup (session start/stop validation, mock server endpoints)
-```bash
-cd connection-setup
-pip install -r requirements.txt -r requirements-dev.txt
-pytest -v
-```
-
-### Python — WebSocket (token validation, audio saving, sender/receiver message handling)
+### Python — the mock pair
 ```bash
 cd websocket-receive-audio
-pip install -r requirements.txt -r requirements-dev.txt
-pytest -v
+pip install -r requirements.txt
+python websocket_test_receiver.py       # terminal 1
+python websocket_audio_sender.py        # terminal 2
 ```
+The receiver writes `received_audio_<timestamp>.wav`; compare it with
+`input.wav` — same sample rate, same length. `connection-setup/` has the same
+shape for the REST side.
 
 ### End-to-end (requires Agora credentials)
 ```bash
@@ -85,7 +77,7 @@ The Go publisher supports H264, VP8, and AV1 via the `-videoCodec` flag.
 
 - **H264** (default): Widest device and browser compatibility
 - **VP8**: Open source, good web compatibility
-- **AV1**: Best compression efficiency, but **requires your Agora App ID to have AV1 enabled on the Agora backend** — contact Agora support to enable it. Without backend enablement, the stream will silently fall back to H264. AV1 also requires Go SDK >= v2.4.10 and native SDK >= v4.4.32.164.
+- **AV1**: Best compression efficiency, but **requires your Agora App ID to have AV1 enabled on the Agora backend** — contact Agora support to enable it. Without backend enablement, the stream will silently fall back to H264. AV1 also has minimum SDK versions — see `go-publish-video/README.md`, which owns them.
 
 ## Use Cases
 

@@ -1,0 +1,4 @@
+# websockets 11 is the last line that takes `extra_headers`; 12 renamed it to
+# `additional_headers`, which these scripts do not use.
+websockets>=10.4,<12
+requests>=2.28

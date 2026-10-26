@@ -10,7 +10,7 @@
   - `connection-setup/` mock REST session API
   - `websocket-receive-audio/` mock WebSocket audio receiver
   - `go-publish-video/` Agora publisher
-- Current workaround branch focus: `go-publish-video/` is pinned to a Modal-compatible `4.4.31` SDK path and publishes `RGB24` input packed to `RGBA`
+- `go-publish-video/` publishes `I420` (YUV420) frames; `go.mod` carries a local `replace` for the SDK path
 
 ## When To Read What
 

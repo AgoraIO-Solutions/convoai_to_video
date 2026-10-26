@@ -250,8 +250,9 @@ service layer forwards to the provider without modification.
 ---
 
 ## Security Notes
-- The API key is now passed in the `x-api-key` header instead of the request body for better security
-- This prevents the API key from being logged in request bodies or appearing in URL parameters
+- The API key travels in the `x-api-key` header, not the request body or the URL
+- A header keeps it out of body logs and out of URL parameters, but **not out of
+  header logs**. The mock redacts it; make sure your own logging does too
 - Always use HTTPS in production to protect the API key in transit
 
 ## Testing

@@ -16,7 +16,7 @@ headers = {
 # Use with websockets library:
 websocket = await websockets.connect(
     "ws://localhost:8765", 
-    additional_headers=headers
+    extra_headers=headers
 )
 ```
 
@@ -125,7 +125,7 @@ After successful initialization, audio data can be streamed using voice commands
 ```json
 {
   "command": "voice",
-  "audio": "UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+LyvmASBjqT2fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+LyvmASBjqT2fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+LyvmASBjqT2fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+LyvmASBjqT2fPNeSsFJHfH8N2QQAoUXrTp66hVFApGn+LyvmASBjqT2fPNeSsFJHfH8N2QQAoUXrTp",
+  "audio": "AACwBGAJ5Aw8D6APEA6MCngFAAA=",
   "sampleRate": 24000,
   "encoding": "PCM16",
   "segment_id": "seg-7f3a1c",
@@ -325,7 +325,7 @@ To test the WebSocket API locally:
    This starts a WebSocket server on `ws://localhost:8765` that will:
    - Validate session tokens
    - Log all received commands
-   - Save received audio as `received_audio.wav`
+   - Save received audio as `received_audio_<timestamp>.wav`
 
 2. **In a new terminal, run the audio sender**:
    ```bash
@@ -339,8 +339,8 @@ To test the WebSocket API locally:
 
 3. **Verify the test**: 
    - Check the receiver terminal for logged messages
-   - Verify that `received_audio.wav` is created in your directory
-   - Compare the original `input.wav` with `received_audio.wav`
+   - Verify that a `received_audio_<timestamp>.wav` is created in your directory
+   - Compare the original `input.wav` with the `received_audio_<timestamp>.wav`
 
 ### Testing Against Your Own Implementation
 

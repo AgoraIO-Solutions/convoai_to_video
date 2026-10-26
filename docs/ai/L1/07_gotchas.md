@@ -5,14 +5,13 @@
 ## Modal / gVisor
 
 - newer Linux RTC `4.4.32` was the failing line investigated for Modal
-- workaround branch pins to `4.4.31`
+- the `linux_rtc_4_4_31` branch pins to `4.4.31`; master is on `v2.4.12`
 - do not silently upgrade the native Linux SDK on this branch
 
 ## SDK Version Boundary
 
 - known-good Modal workaround line:
-  - Go wrapper `v2.2.4`
-  - native Linux RTC `4.4.31`
+  - Go wrapper `v2.4.12`
 - known-bad Modal line investigated:
   - native Linux RTC `4.4.32`
 - if a Modal regression reappears, check the installed native SDK first
@@ -30,7 +29,7 @@
 
 ## Media Format Mismatch
 
-- `RGB24` input and `RGBA` publish are not interchangeable
+- `I420` is the only pixel format on master; there is no RGB path
 - width/height and bytes-per-frame must match the file exactly
 - partial frame reads cause loop/reset behavior
 
@@ -57,9 +56,9 @@
 
 ## Sample Asset Pitfalls
 
-- the bundled RGB sample is sized for the current default width and height
+- the bundled `I420` sample is sized for the current default width and height
 - swapping in another raw file without matching flags leads to broken frames
-- YUV and RGB sample files are not interchangeable even if resolution matches
+- a sample file must match the configured width, height and format exactly
 
 ## Manual Test Pitfalls
 
@@ -70,7 +69,7 @@
 ## First Things To Check
 
 1. UID mode matches across publisher and viewer
-2. SDK line is still `4.4.31` on the workaround branch
+2. SDK line is `v2.4.12` on master
 3. bytes-per-frame math matches the chosen raw input format
 4. browser test is done with a video-capable viewer
 5. sample file dimensions match the CLI flags

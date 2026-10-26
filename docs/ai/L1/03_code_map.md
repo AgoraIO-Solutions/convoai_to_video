@@ -41,8 +41,6 @@
 | `go-publish-video/go.mod` | module deps and local SDK override |
 | `go-publish-video/go.sum` | dependency lock |
 | `go-publish-video/test_e2e.sh` | shell entrypoint for manual e2e checks |
-| `go-publish-video/child_test.go` | child-side focused tests |
-| `go-publish-video/parent_test.go` | parent loop and conversion tests |
 | `go-publish-video/ipc_test.go` | FlatBuffers message coverage |
 
 ## Python Files

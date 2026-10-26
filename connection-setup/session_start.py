@@ -113,7 +113,7 @@ def verify_success_response(data):
     
     # Verify websocket_address format
     websocket_address = data["websocket_address"]
-    expected_websocket = "ws://oai.agora.io:8765"
+    expected_websocket = "ws://localhost:8765"
     
     if websocket_address != expected_websocket:
         logger.error(f"❌ Unexpected websocket_address: {websocket_address}")

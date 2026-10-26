@@ -30,18 +30,18 @@
 ## Python Components
 
 - `connection-setup/`
-  - install: `pip install -r requirements.txt -r requirements-dev.txt`
-  - test: `pytest -v`
+  - install: `pip install -r requirements.txt`
 - `websocket-receive-audio/`
-  - install: `pip install -r requirements.txt -r requirements-dev.txt`
-  - test: `pytest -v`
+  - install: `pip install -r requirements.txt`
+  - no unit tests: run the pair by hand, receiver first, then sender
+    (see that directory's README)
 
 ## Go Publisher
 
 - work in `go-publish-video/`
-- branch workaround target:
-  - Go SDK `v2.2.4`
-  - native Linux RTC `4.4.31`
+- Go SDK `v2.4.12`, per `go-publish-video/go.mod`
+- native Linux RTC version floors live in `go-publish-video/README.md`;
+  they are not restated here
 - set local SDK path:
   - `go mod edit -replace github.com/AgoraIO-Extensions/Agora-Golang-Server-SDK/v2=/path/to/Agora-Golang-Server-SDK`
 - copy native libs:
@@ -52,8 +52,8 @@
 ## Recommended SDK Line
 
 - workaround branch: `linux_rtc_4_4_31`
-- Go wrapper target: `v2.2.4`
-- native Linux RTC target: `4.4.31`
+- Go wrapper: `v2.4.12` (`go-publish-video/go.mod`)
+- native Linux RTC floors: see `go-publish-video/README.md`
 - rationale:
   - this path was verified on Modal/gVisor
   - newer `4.4.32` was the failing line during startup on Modal
@@ -101,8 +101,10 @@ make test
 ## Sample Media
 
 - audio sample: `go-publish-video/test_data/send_audio_16k_1ch.pcm`
-- original YUV sample: `go-publish-video/test_data/send_video_cif.yuv`
-- Modal workaround sample: `go-publish-video/test_data/send_video_cif.rgb24`
+- video sample: `go-publish-video/test_data/send_video_cif.yuv`
+
+Those are the only two assets in `test_data/`. A `send_video_cif.rgb24` was
+listed here but has never existed on master.
 
 ## File Format Expectations
 
@@ -110,11 +112,11 @@ make test
   - PCM16
   - mono
   - 16 kHz
-- `send_video_cif.rgb24`
-  - packed `RGB24`
+- `send_video_cif.yuv`
+  - `I420` (YUV420 planar)
   - `352x288`
-  - 3 bytes per pixel
-- parent converts `RGB24` to `RGBA` before sending to child
+  - 1.5 bytes per pixel
+- parent sends raw `I420` bytes to child; no colour conversion
 
 ## Common Setup Failures
 
