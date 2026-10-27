@@ -51,11 +51,10 @@ run: build
 	fi
 	./parent -appID "$(APP_ID)" -channelName "test-channel" -userID "test-user-123"
 
-# Run tests (requires flatc for code generation, does NOT require Agora SDK native libs)
-test: generate
-	@echo "Running tests..."
-	@go test -v -count=1 -tags test ./...
-	@echo "Tests complete."
+# Keep the old entrypoint explicit instead of reporting an empty suite as passing.
+test:
+	@echo "No unit-test suite is included. Use make test-e2e for the credentialed audio smoke check." >&2
+	@exit 1
 
 # Help
 help:
@@ -65,8 +64,8 @@ help:
 	@echo "  make build    - Build child and parent binaries"
 	@echo "  make clean    - Remove build artifacts"
 	@echo "  make run      - Run the demo (requires APP_ID=your_app_id)"
-	@echo "  make test     - Run Go tests"
+	@echo "  make test     - Report the missing unit-test suite and exit non-zero"
 	@echo "  make subscriber - Build subscriber binary (for e2e tests)"
 	@echo "  make tokengen - Build token generator (for e2e tests)"
-	@echo "  make test-e2e - Run e2e tests (requires APP_ID and APP_CERT)"
+	@echo "  make test-e2e - Run the audio smoke check (requires SDK, APP_ID, and APP_CERT)"
 	@echo "  make help     - Show this help message"

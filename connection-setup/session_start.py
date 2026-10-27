@@ -1,6 +1,7 @@
 import requests
 import json
 import logging
+from urllib.parse import urlparse
 
 # Configuration for local testing
 API_ENDPOINT = "http://localhost:8764/session/start"  # Points to mock server
@@ -69,7 +70,8 @@ def test_session_start_endpoint():
             return verify_success_response(response_data)
         else:
             logger.error(f"❌ Request failed with status {response.status_code}")
-            return verify_error_response(response_data, response.status_code)
+            verify_error_response(response_data, response.status_code)
+            return False
             
     except requests.exceptions.ConnectionError as e:
         logger.error(f"❌ Connection error: {e}")
@@ -89,6 +91,10 @@ def test_session_start_endpoint():
 def verify_success_response(data):
     """Verify that success response contains expected fields"""
     logger.info("Verifying success response structure...")
+
+    if not isinstance(data, dict):
+        logger.error("❌ Success response must be a JSON object")
+        return False
     
     required_fields = ["session_id", "websocket_address", "session_token"]
     missing_fields = []
@@ -105,7 +111,7 @@ def verify_success_response(data):
     
     # Verify session_id is not empty
     session_id = data.get("session_id")
-    if not session_id or len(session_id.strip()) == 0:
+    if not isinstance(session_id, str) or not session_id.strip():
         logger.error("❌ session_id is empty")
         return False
     else:
@@ -113,18 +119,19 @@ def verify_success_response(data):
     
     # Verify websocket_address format
     websocket_address = data["websocket_address"]
-    expected_websocket = "ws://localhost:8765"
-    
-    if websocket_address != expected_websocket:
-        logger.error(f"❌ Unexpected websocket_address: {websocket_address}")
-        logger.error(f"Expected: {expected_websocket}")
+    if not isinstance(websocket_address, str):
+        logger.error("❌ websocket_address must be a string")
+        return False
+    address = urlparse(websocket_address)
+    if address.scheme not in ("ws", "wss") or not address.hostname:
+        logger.error(f"❌ Invalid websocket_address: {websocket_address}")
         return False
     else:
         logger.info(f"✅ Correct websocket_address: {websocket_address}")
     
     # Verify session_token is not empty
     session_token = data["session_token"]
-    if not session_token or len(session_token.strip()) == 0:
+    if not isinstance(session_token, str) or not session_token.strip():
         logger.error("❌ session_token is empty")
         return False
     else:
@@ -389,14 +396,16 @@ def main():
     logger.info(f"Malformed payload test: {'✅ PASSED' if success4 else '❌ FAILED'}")
     logger.info(f"Vendor passthrough test: {'✅ PASSED' if success5 else '❌ FAILED'}")
 
-    total_passed = sum([success1, success2, success3, success4, success5])
-    logger.info(f"\nOverall: {total_passed}/5 tests passed")
+    results = [success1, success2, success3, success4, success5]
+    total_passed = sum(results)
+    logger.info(f"\nOverall: {total_passed}/{len(results)} tests passed")
     
-    if total_passed == 4:
+    if all(results):
         logger.info("🎉 All tests passed!")
-    else:
-        logger.info("⚠️ Some tests failed. Check the logs above for details.")
+        return 0
+    logger.error("❌ Some tests failed. Check the logs above for details.")
+    return 1
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

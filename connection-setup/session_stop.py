@@ -49,8 +49,17 @@ def create_test_session():
         
         if response.status_code == 200:
             data = response.json()
+            if not isinstance(data, dict):
+                logger.error("❌ Session creation response must be a JSON object")
+                return False
             test_session_id = data.get("session_id")
             test_session_token = data.get("session_token")
+            if not all(
+                isinstance(value, str) and value.strip()
+                for value in (test_session_id, test_session_token)
+            ):
+                logger.error("❌ Session creation response needs a non-empty session_id and session_token")
+                return False
             
             logger.info(f"✅ Test session created successfully!")
             logger.info(f"Session ID: {test_session_id}")
@@ -136,6 +145,10 @@ def test_session_stop_endpoint():
 def verify_success_response(data):
     """Verify that success response contains expected fields"""
     logger.info("Verifying success response structure...")
+
+    if not isinstance(data, dict):
+        logger.error("❌ Success response must be a JSON object")
+        return False
     
     required_fields = ["status", "message"]
     missing_fields = []
@@ -160,7 +173,7 @@ def verify_success_response(data):
     
     # Verify message field is not empty
     message = data.get("message", "")
-    if not message or len(message.strip()) == 0:
+    if not isinstance(message, str) or not message.strip():
         logger.error("❌ message field is empty")
         return False
     else:
@@ -431,14 +444,16 @@ def main():
     logger.info(f"Missing session token test: {'✅ PASSED' if success5 else '❌ FAILED'}")
     logger.info(f"Invalid session_id test: {'✅ PASSED' if success6 else '❌ FAILED'}")
     
-    total_passed = sum([success1, success2, success3, success4, success5, success6])
-    logger.info(f"\nOverall: {total_passed}/6 tests passed")
+    results = [success1, success2, success3, success4, success5, success6]
+    total_passed = sum(results)
+    logger.info(f"\nOverall: {total_passed}/{len(results)} tests passed")
     
-    if total_passed == 6:
+    if all(results):
         logger.info("🎉 All tests passed!")
-    else:
-        logger.info("⚠️ Some tests failed. Check the logs above for details.")
+        return 0
+    logger.error("❌ Some tests failed. Check the logs above for details.")
+    return 1
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

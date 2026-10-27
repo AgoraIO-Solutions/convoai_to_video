@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# E2E integration test: publisher + subscriber with token auth
+# Audio smoke check: publisher + subscriber with token auth.
+# Video reception and A/V synchronization require manual verification.
 #
 # Required environment variables:
 #   APP_ID   - Agora App ID
@@ -16,17 +17,36 @@ fi
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
+for binary in parent subscriber tokengen; do
+    if [ ! -x "./$binary" ]; then
+        echo "Error: ./$binary is missing or not executable; run make build subscriber tokengen"
+        exit 1
+    fi
+done
+
 PUBLISHER_PID=""
 RESULT=0
 
 cleanup() {
-    if [ -n "$PUBLISHER_PID" ] && kill -0 "$PUBLISHER_PID" 2>/dev/null; then
-        echo "Cleaning up publisher (PID $PUBLISHER_PID)..."
-        kill "$PUBLISHER_PID" 2>/dev/null || true
+    if [ -n "$PUBLISHER_PID" ]; then
+        if kill -0 "$PUBLISHER_PID" 2>/dev/null; then
+            echo "Cleaning up publisher (PID $PUBLISHER_PID)..."
+            kill "$PUBLISHER_PID" 2>/dev/null || true
+            for ((attempt = 0; attempt < 50; attempt++)); do
+                kill -0 "$PUBLISHER_PID" 2>/dev/null || break
+                sleep 0.1
+            done
+            if kill -0 "$PUBLISHER_PID" 2>/dev/null; then
+                kill -KILL "$PUBLISHER_PID" 2>/dev/null || true
+            fi
+        fi
         wait "$PUBLISHER_PID" 2>/dev/null || true
+        PUBLISHER_PID=""
     fi
 }
 trap cleanup EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
 
 run_test() {
     local test_name="$1"
@@ -41,11 +61,18 @@ run_test() {
     # Generate publisher token using tokengen
     echo "Generating publisher token..."
     local pub_token
-    # tokengen defaults -enableStringUID=true, so the numeric test was handed
-    # a string-UID token and the publisher rejected it. Pass the mode through.
-    pub_token=$(./tokengen -appID "$APP_ID" -appCert "$APP_CERT" \
+    # This function runs in an if condition, so check failures explicitly:
+    # Bash disables errexit inside the function in that context.
+    if ! pub_token=$(./tokengen -appID "$APP_ID" -appCert "$APP_CERT" \
         -channelName "$channel_name" -uid "$publisher_uid" -role publisher \
-        -enableStringUID="$enable_string_uid")
+        -enableStringUID="$enable_string_uid"); then
+        echo "[test] FAIL: Publisher token generation failed"
+        return 1
+    fi
+    if [ -z "$pub_token" ]; then
+        echo "[test] FAIL: Publisher token is empty"
+        return 1
+    fi
     echo "[test] Generated publisher token for uid=$publisher_uid"
 
     # Start publisher in background
@@ -59,11 +86,7 @@ run_test() {
     PUBLISHER_PID=$!
     echo "[test] Publisher started (PID $PUBLISHER_PID)"
 
-    # Wait for publisher to connect and start streaming
-    echo "[test] Waiting 5s for publisher to connect..."
-    sleep 5
-
-    # Check publisher is still running
+    # The subscriber waits for connection and audio with its own timeouts.
     if ! kill -0 "$PUBLISHER_PID" 2>/dev/null; then
         echo "[test] FAIL: Publisher exited prematurely"
         PUBLISHER_PID=""
@@ -80,11 +103,13 @@ run_test() {
         -publisherUID "$publisher_uid" \
         -enableStringUID="$enable_string_uid" || sub_result=$?
 
-    # Kill publisher
+    if ! kill -0 "$PUBLISHER_PID" 2>/dev/null; then
+        echo "[test] FAIL: Publisher exited during the audio check"
+        sub_result=1
+    fi
+
     echo "[test] Stopping publisher..."
-    kill "$PUBLISHER_PID" 2>/dev/null || true
-    wait "$PUBLISHER_PID" 2>/dev/null || true
-    PUBLISHER_PID=""
+    cleanup
 
     if [ "$sub_result" -eq 0 ]; then
         echo ""
@@ -98,7 +123,7 @@ run_test() {
 }
 
 echo "======================================="
-echo "E2E Integration Test: Publisher + Subscriber"
+echo "Audio Smoke Check: Publisher + Subscriber (video not checked)"
 echo "======================================="
 
 # Test 1: String UID mode
@@ -117,9 +142,9 @@ fi
 
 echo "======================================="
 if [ "$RESULT" -eq 0 ]; then
-    echo "ALL TESTS PASSED"
+    echo "AUDIO SMOKE CHECKS PASSED (video not checked)"
 else
-    echo "SOME TESTS FAILED"
+    echo "AUDIO SMOKE CHECKS FAILED"
 fi
 echo "======================================="
 

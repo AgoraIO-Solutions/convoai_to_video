@@ -1,4 +1,5 @@
 import asyncio
+import contextlib
 import base64
 import json
 import uuid
@@ -29,6 +30,7 @@ class WebSocketAudioSender:
     def __init__(self, wav_file="input.wav"):
         self.wav_file = wav_file
         self.websocket = None
+        self.listener_task = None
         self.stop_event = asyncio.Event()
         
     async def connect(self):
@@ -68,7 +70,7 @@ class WebSocketAudioSender:
             logger.info("Sent initial configuration payload with 'init' command")
             
             # Start listening for messages in background
-            asyncio.create_task(self.listen_for_messages())
+            self.listener_task = asyncio.create_task(self.listen_for_messages())
             
             # Wait a moment for connection to be fully established
             await asyncio.sleep(1)
@@ -101,8 +103,11 @@ class WebSocketAudioSender:
             async for message in self.websocket:
                 data = json.loads(message)
                 logger.info(f"Received message: {data}")
+                if isinstance(data, dict) and data.get("error") is True:
+                    raise RuntimeError(f"Receiver reported an error: {data.get('message', data)}")
         except Exception as e:
             logger.error(f"Error listening to messages: {e}")
+            raise
     
     async def send_audio_chunks(self):
         """Read WAV file and send audio chunks over WebSocket"""
@@ -160,6 +165,7 @@ class WebSocketAudioSender:
                         except Exception as e:
                             if attempt == 2:
                                 logger.error(f"Failed to send chunk after 3 attempts: {e}")
+                                raise
                             else:
                                 await asyncio.sleep(0.01)
                     
@@ -185,6 +191,7 @@ class WebSocketAudioSender:
             logger.info(f"Sent voice_end command, event_id: {event_id}")
         except Exception as e:
             logger.error(f"Error sending voice_end: {e}")
+            raise
     
     async def send_heartbeat(self):
         """Send a heartbeat message"""
@@ -202,6 +209,7 @@ class WebSocketAudioSender:
             logger.info(f"Sent heartbeat, event_id: {event_id}, timestamp: {timestamp}")
         except Exception as e:
             logger.error(f"Error sending heartbeat: {e}")
+            raise
     
     async def disconnect(self):
         """Close WebSocket connection"""
@@ -216,7 +224,14 @@ class WebSocketAudioSender:
             # Wait a bit before closing
             await asyncio.sleep(2.0)
         finally:
-            await self.disconnect()
+            try:
+                await self.disconnect()
+            finally:
+                if self.listener_task is not None:
+                    if not self.listener_task.done():
+                        self.listener_task.cancel()
+                    with contextlib.suppress(asyncio.CancelledError):
+                        await self.listener_task
 
 
 async def main():

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strconv"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -17,22 +18,22 @@ import (
 
 func main() {
 	var (
-		appID          string
-		appCert        string
-		channelName    string
-		publisherUID   string
+		appID           string
+		appCert         string
+		channelName     string
+		publisherUID    string
 		enableStringUID bool
 	)
 
 	flag.StringVar(&appID, "appID", "", "Agora App ID (required)")
 	flag.StringVar(&appCert, "appCert", "", "App certificate for token generation (required)")
 	flag.StringVar(&channelName, "channelName", "", "Channel name to join (required)")
-	flag.StringVar(&publisherUID, "publisherUID", "", "Publisher UID to expect audio from")
+	flag.StringVar(&publisherUID, "publisherUID", "", "Publisher UID to expect audio from (required)")
 	flag.BoolVar(&enableStringUID, "enableStringUID", true, "Enable string UID support")
 	flag.Parse()
 
-	if appID == "" || appCert == "" || channelName == "" {
-		fmt.Println("Error: -appID, -appCert, and -channelName are required")
+	if appID == "" || appCert == "" || channelName == "" || publisherUID == "" {
+		fmt.Println("Error: -appID, -appCert, -channelName, and -publisherUID are required")
 		flag.Usage()
 		os.Exit(1)
 	}
@@ -40,16 +41,34 @@ func main() {
 	logger := log.New(os.Stderr, "[subscriber] ", log.LstdFlags|log.Lshortfile)
 
 	// Determine subscriber UID
+	const numericSubscriberUID uint32 = 200
 	subscriberUID := "subscriber_200"
 	if !enableStringUID {
-		subscriberUID = "200"
+		subscriberUID = strconv.FormatUint(uint64(numericSubscriberUID), 10)
+		uid, err := strconv.ParseUint(publisherUID, 10, 32)
+		if err != nil || uid == 0 {
+			logger.Fatal("-publisherUID must be a non-zero uint32 when -enableStringUID=false")
+		}
+		publisherUID = strconv.FormatUint(uid, 10)
+	}
+	if publisherUID == subscriberUID {
+		logger.Fatal("Publisher and subscriber must use different UIDs")
 	}
 
-	// Generate subscriber token
-	token, err := rtctokenbuilder.BuildTokenWithUserAccount(
-		appID, appCert, channelName, subscriberUID,
-		rtctokenbuilder.RoleSubscriber, 3600, 3600,
-	)
+	// Generate the token with the same UID mode as the connection.
+	var token string
+	var err error
+	if enableStringUID {
+		token, err = rtctokenbuilder.BuildTokenWithUserAccount(
+			appID, appCert, channelName, subscriberUID,
+			rtctokenbuilder.RoleSubscriber, 3600, 3600,
+		)
+	} else {
+		token, err = rtctokenbuilder.BuildTokenWithUid(
+			appID, appCert, channelName, numericSubscriberUID,
+			rtctokenbuilder.RoleSubscriber, 3600, 3600,
+		)
+	}
 	if err != nil {
 		logger.Fatalf("Failed to generate subscriber token: %v", err)
 	}
@@ -149,6 +168,10 @@ func main() {
 	// Audio frame observer
 	audioObserver := &agoraservice.AudioFrameObserver{
 		OnPlaybackAudioFrameBeforeMixing: func(localUser *agoraservice.LocalUser, channelId string, uid string, frame *agoraservice.AudioFrame, vadResultState agoraservice.VadState, vadResultFrame *agoraservice.AudioFrame) bool {
+			if channelId != channelName || uid != publisherUID || frame == nil ||
+				frame.SamplesPerChannel <= 0 || frame.SamplesPerSec <= 0 || frame.Channels <= 0 {
+				return true
+			}
 			count := atomic.AddInt64(&frameCount, 1)
 			if count <= 10 || count%50 == 0 {
 				logger.Printf("Received audio frame %d from uid: %s (samples=%d, rate=%d, ch=%d)",
@@ -200,8 +223,8 @@ func main() {
 		case <-ticker.C:
 			count := atomic.LoadInt64(&frameCount)
 			if count >= 10 {
-				logger.Printf("PASS: Received %d audio frames from publisher", count)
-				fmt.Printf("[subscriber] PASS: Received %d audio frames from publisher\n", count)
+				logger.Printf("PASS: Received %d audio frames from publisher %s (video not checked)", count, publisherUID)
+				fmt.Printf("[subscriber] PASS: Received %d audio frames from publisher %s (video not checked)\n", count, publisherUID)
 				conn.Disconnect()
 				conn.Release()
 				os.Exit(0)
