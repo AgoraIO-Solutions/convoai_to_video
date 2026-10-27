@@ -125,9 +125,14 @@ class WebSocketTestReceiver:
         except Exception as e:
             logger.error(f"Client error: {e}")
         finally:
-            # Close the audio file
-            if hasattr(self, '_audio_file'):
+            # Close the file AND forget it. A closed wave object is still
+            # truthy, so leaving it in place made the next session on this
+            # process skip the lazy open in write_audio_chunk and fail every
+            # chunk with "'NoneType' object has no attribute 'write'" -- audio
+            # arrived and nothing was recorded.
+            if self._audio_file is not None:
                 self._audio_file.close()
+                self._audio_file = None
                 logger.info(f"Audio file closed for {client_id}")
             
             logger.info(f"Client {client_id} disconnected. Total chunks: {chunk_count}")
