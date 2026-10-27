@@ -79,9 +79,11 @@
 
 ## Testing Shape
 
-- Python components are unit-testable without Agora
-- Go IPC/tests are unit-testable without Agora
-- full end-to-end validation requires:
+- no unit-test suite is included
+- Python clients provide manual protocol checks without Agora credentials
+- the Go smoke check validates received audio from the expected publisher in both UID modes
+- video reception and A/V synchronization require a manual viewer check
+- live publishing validation requires:
   - valid credentials
   - a live channel
   - a viewer or subscriber

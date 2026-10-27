@@ -75,8 +75,15 @@ sequenceDiagram
 
 ## Testing
 
-There are no unit tests in this repository. `go test ./...` reports "no test
-files" and passes without checking anything. What exists is manual:
+No unit-test suite is included. The Python scripts provide manual checks;
+the Go publisher has a credentialed audio smoke check. `make test` exits
+non-zero with an explanation because there is no unit-test suite to run.
+
+### REST session checks
+
+Follow [connection setup testing](connection-setup/README.md#testing) to run
+the mock server and the session start/stop scripts. Each client exits non-zero
+if any check fails.
 
 ### Python — the mock pair
 ```bash
@@ -88,6 +95,20 @@ python websocket_audio_sender.py        # terminal 2
 The receiver writes `received_audio_<timestamp>.wav`; compare it with
 `input.wav` — same sample rate, same length. `connection-setup/` has the same
 shape for the REST side.
+
+The sender exits non-zero on a send or listener error. A successful exit
+confirms transmission only; inspect the receiver's WAV to verify the output.
+
+### Agora audio smoke check (requires SDK and credentials)
+
+```bash
+cd go-publish-video
+APP_ID=<your_app_id> APP_CERT=<your_app_cert> make test-e2e
+```
+
+This checks that a subscriber receives at least 10 non-empty audio frames
+from the expected publisher in both UID modes. Video and A/V synchronization
+need the manual viewer check below.
 
 ### End-to-end (requires Agora credentials)
 ```bash

@@ -41,7 +41,6 @@
 | `go-publish-video/go.mod` | module deps and local SDK override |
 | `go-publish-video/go.sum` | dependency lock |
 | `go-publish-video/test_e2e.sh` | shell entrypoint for manual e2e checks |
-| `go-publish-video/ipc_test.go` | FlatBuffers message coverage |
 
 ## Python Files
 
@@ -53,15 +52,17 @@
 | `websocket-receive-audio/websocket_test_receiver.py` | mock WS receiver |
 | `websocket-receive-audio/websocket_audio_sender.py` | WS sender utility |
 
-## Test Files
+## Validation Entry Points
+
+No unit-test suite is included. These are manual clients and a live audio smoke check.
 
 | File | Responsibility |
 | --- | --- |
-| `connection-setup/test_session_receiver.py` | receiver behavior tests |
-| `connection-setup/test_session_start.py` | start-client tests |
-| `connection-setup/test_session_stop.py` | stop-client tests |
-| `websocket-receive-audio/test_websocket_receiver.py` | receiver protocol tests |
-| `websocket-receive-audio/test_websocket_sender.py` | sender utility tests |
+| `connection-setup/session_start.py` | session start checks; non-zero exit on failure |
+| `connection-setup/session_stop.py` | session stop checks; non-zero exit on failure |
+| `websocket-receive-audio/websocket_audio_sender.py` | sender; verify the saved WAV manually |
+| `go-publish-video/test_e2e.sh` | audio smoke check for both UID modes; requires SDK and credentials |
+| `go-publish-video/subscriber.go` | counts non-empty audio frames from the requested publisher |
 
 ## Where To Edit
 

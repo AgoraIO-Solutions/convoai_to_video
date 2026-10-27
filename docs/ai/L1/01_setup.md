@@ -4,7 +4,7 @@
 
 ## Tooling
 
-- Python 3.11+ for the Python examples and tests
+- Python 3.11+ for the Python examples and manual checks
 - Go 1.21 for `go-publish-video/`
 - `flatbuffers-compiler` for `go-publish-video/ipc`
 - Agora Go Server SDK checkout for the Go publisher
@@ -15,7 +15,7 @@
 | --- | --- | --- | --- |
 | `connection-setup/` | Python | Yes | No |
 | `websocket-receive-audio/` | Python | Yes | No |
-| `go-publish-video/` tests | Go | Yes | No |
+| `go-publish-video/` audio smoke check | Go + native SDK | Yes | Yes |
 | `go-publish-video/` live publish | Go + native SDK | Yes | Yes |
 
 ## Repo Entry Points
@@ -31,6 +31,8 @@
 
 - `connection-setup/`
   - install: `pip install -r requirements.txt`
+  - start `session_test_receiver.py`, then run `session_start.py` and `session_stop.py`
+  - clients exit non-zero if any check fails
 - `websocket-receive-audio/`
   - install: `pip install -r requirements.txt`
   - no unit tests: run the pair by hand, receiver first, then sender
@@ -63,17 +65,16 @@
 - `make build` creates:
   - `go-publish-video/parent`
   - `go-publish-video/child`
-- `make test` runs:
-  - IPC framing tests
-  - parent loop/unit tests
-  - child-related unit tests that do not require a live Agora session
+- no unit-test suite is included; `make test` reports this and exits non-zero
+- `make test-e2e` builds and runs an audio smoke check with SDK and credentials
+- the smoke check requires 10 non-empty audio frames from the expected publisher
+  in each UID mode; video and A/V synchronization need manual verification
 
 ## Common Commands
 
 ```bash
 cd go-publish-video
 make build
-make test
 ./parent -appID "<app_id>" -channelName "<channel>" -userID "10" -enableStringUID=false
 ```
 

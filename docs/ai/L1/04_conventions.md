@@ -67,7 +67,11 @@
 
 ## Testing
 
-- use `make test` for Go unit tests
+- no unit-test suite is included; `make test` exits non-zero to report that gap
+- use `make test-e2e` for the credentialed audio smoke check
+- REST clients exit non-zero when any check fails
+- successful WebSocket transmission still needs a manual WAV comparison
+- verify video and A/V synchronization manually; the smoke check receives audio only
 - prefer numeric UIDs for manual browser verification
 - do not assume the Python mocks are production services
 

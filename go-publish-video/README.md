@@ -108,25 +108,22 @@ Use your App ID and Channel Name to join the stream.
 
 ## Testing
 
-### Unit Tests
+No unit-test suite is included. `make test` reports that gap and exits non-zero.
 
-Unit tests cover FlatBuffers IPC round-trips, parent/child message framing, and codec configuration logic. They do **not** require Agora SDK native libraries or a network connection.
+### Agora Audio Smoke Check
 
-```bash
-make test
-```
-
-### E2E Integration Tests
-
-End-to-end tests verify that the publisher can connect, publish audio/video, and that a subscriber receives audio frames. Tests both string UID and numeric UID modes with token authentication.
+The smoke check requires the native SDK and valid credentials. It runs both
+string and numeric UID modes with matching tokens and checks for at least
+10 non-empty audio frames from the expected publisher. The subscriber does
+not receive video or check A/V synchronization; verify those with a viewer.
 
 ```bash
-# Build the test binaries
+# Build the smoke-check binaries
 make build
 make subscriber
 make tokengen
 
-# Run e2e tests (requires valid Agora credentials)
+# Run the audio smoke check
 APP_ID=<your_app_id> APP_CERT=<your_app_cert> make test-e2e
 ```
 
@@ -186,11 +183,11 @@ Join at https://webdemo.agora.io/basicVideoCall/index.html with the App ID, chan
 |--------|-------------|
 | `make` | Generate FlatBuffers code and build binaries |
 | `make build` | Build child and parent binaries |
-| `make test` | Run Go unit tests |
+| `make test` | Report the missing unit-test suite and exit non-zero |
 | `make clean` | Remove build artifacts |
 | `make subscriber` | Build subscriber binary (for e2e tests) |
 | `make tokengen` | Build token generator (for e2e tests) |
-| `make test-e2e` | Run e2e integration tests |
+| `make test-e2e` | Run the credentialed Agora audio smoke check |
 | `make run APP_ID=<id>` | Run the demo |
 | `make help` | Show all targets |
 

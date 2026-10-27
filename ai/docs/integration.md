@@ -96,24 +96,20 @@ Modify `parent.go` to send your generated YUV video frames and PCM audio instead
 
 ## Testing
 
-Each component has unit tests that run without Agora credentials:
+No unit-test suite is included. Use the component READMEs for
+[REST session checks](../../connection-setup/README.md#testing) and the
+[manual WebSocket flow](../../websocket-receive-audio/README.md#testing).
+The REST clients exit non-zero if any check fails. WebSocket sender success
+confirms transmission; inspect the receiver's WAV to verify the output.
 
-```bash
-# Go publisher — IPC, message framing, codec config
-cd go-publish-video && make test
-
-# Connection setup — session validation, mock server
-cd connection-setup && pip install -r requirements.txt
-
-# WebSocket — token validation, audio handling, message protocol
-cd websocket-receive-audio && pip install -r requirements.txt
-```
-
-E2E tests (requires Agora App ID and App Certificate):
+The Go audio smoke check requires the native SDK, an Agora App ID, and App Certificate:
 ```bash
 cd go-publish-video
 APP_ID=<your_app_id> APP_CERT=<your_app_cert> make test-e2e
 ```
+
+It verifies at least 10 non-empty audio frames from the expected publisher
+in string and numeric UID modes. Verify video and A/V synchronization manually.
 
 ## Technical Notes
 

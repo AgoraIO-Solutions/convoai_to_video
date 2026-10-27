@@ -270,7 +270,9 @@ service layer forwards to the provider without modification.
 - Always use HTTPS in production to protect the API key in transit
 
 ## Testing
-Use the provided test scripts to verify the endpoints and WebSocket functionality:
+Use the provided manual check scripts to verify the REST endpoints. No unit-test
+suite is included. Each client exits with status 0 only if all of its checks pass,
+and status 1 if any check fails or the server cannot be reached.
 
 ### Mock Server
 First, start the mock server for local testing:
@@ -313,5 +315,6 @@ To test against your own API implementation instead of the mock server:
 ### Testing Notes
 - The mock server (`session_test_receiver.py`) uses API key `test-api-key-123` by default
 - You can set a custom API key via environment variable: `export TEST_API_KEY='your-custom-key'`
-- All test scripts include comprehensive validation and error handling tests
+- The clients check basic success responses and selected invalid requests;
+  they do not provide comprehensive protocol coverage
 - The mock server provides detailed logging for debugging

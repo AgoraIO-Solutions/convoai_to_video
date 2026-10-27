@@ -317,6 +317,9 @@ receiver demonstrates audio and control messages only.
 
 ## Testing
 
+No unit-test suite is included. The sender exits non-zero if sending or listening
+fails. Its success confirms transmission only; verify the saved WAV manually.
+
 ### Prerequisites
 Before running the tests, you need an audio file:
 1. Create or obtain a WAV file named `input.wav` in the `websocket-receive-audio` directory
@@ -377,7 +380,8 @@ To test against your own WebSocket server instead of the mock receiver:
 
 ### Testing Notes
 - The mock receiver expects session token `test_session_token_12345` by default
-- Tests cover essential commands: `init` (including session_id), `voice`, `voice_end`, and `heartbeat`
+- The sender demonstrates `init` (including session_id), `voice`, `voice_end`, and
+  `heartbeat`; it does not automatically check receiver output
 - The sender scripts predate `segment_id` and do not send it; a receiver must still treat each `voice_end`-delimited run as one segment
 - All commands are logged with detailed information for debugging
 - Audio is saved in PCM 16-bit WAV format

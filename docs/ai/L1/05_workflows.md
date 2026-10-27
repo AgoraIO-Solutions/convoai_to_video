@@ -18,6 +18,15 @@
 4. confirm both audio and video render
 5. if audio works but video does not, inspect format and viewer UID mode first
 
+## Run The Audio Smoke Check
+
+1. set up the SDK and native libraries as above
+2. run `APP_ID=<id> APP_CERT=<cert> make test-e2e` in `go-publish-video/`
+3. require a zero exit status for both UID modes
+4. check video and A/V synchronization with the browser workflow separately
+
+There is no unit-test suite; `make test` exits non-zero to report that gap.
+
 ## Swap Sample Media
 
 1. put the audio/video files in `go-publish-video/test_data/`
