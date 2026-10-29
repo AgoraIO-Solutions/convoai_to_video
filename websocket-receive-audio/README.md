@@ -287,6 +287,38 @@ Decode the outer message, then decode the JSON string in `content`. For `type: "
 handle the gesture named by `action`. The vendor defines the gesture names; ignore unsupported
 names and document how actions overlap and stop.
 
+**Ignore what you do not implement.** This applies to the whole `content` object and is the
+rule that lets it grow without breaking a receiver:
+
+- a `type` you do not handle — skip the message;
+- a key beside `type` and `action` that you do not recognise — ignore the key, and still handle
+  the action;
+- an `action` name you do not implement — ignore the message.
+
+A receiver that errors or disconnects on any of those will break when a field is added.
+
+**Optional parameters.** An action may carry a `params` object. It is absent unless the sender
+has something to put in it, so a receiver that does not use parameters sees exactly the message
+it sees today.
+
+```json
+{
+  "command": "special",
+  "content": "{\"type\":\"action\",\"action\":\"happy\",\"params\":{\"in_seconds\":3}}",
+  "segment_id": "seg-7f3a1c",
+  "event_id": "cd3c81e682af4bd5a63d60be07b0b537"
+}
+```
+
+The parameter names, their units and their effect are the vendor's to define, the same way the
+gesture names are — nothing upstream interprets them. Values are numbers. Declare the names you
+accept and the range of each; a value outside a declared range, or a name you did not declare,
+is not sent. A `params` object you do not expect follows the ignore rule above: handle the
+action and ignore the object.
+
+A cue that sets a style until the end of a response and a one-shot gesture are both just names
+here. There is no separate command for either, and none is needed.
+
 **When to act:**
 
 | `segment_id` | Act |
