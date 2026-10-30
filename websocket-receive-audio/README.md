@@ -186,6 +186,17 @@ Implementations **MUST**:
 
 Senders predating `segment_id` omit it; treat each `voice_end`-delimited run as one segment.
 
+#### How early `voice_end` arrives
+
+Audio is sent as fast as it is produced, not in real time, so a segment's `voice_end` can arrive
+**long before** the audio you hold has finished playing. Measured across 31 segments: delivery
+ran **3.8x to 17x faster than real time**, and on a 40-word reply 41.2 s of audio arrived in
+12.8 s — so `voice_end` closed the segment **28 seconds** before the avatar stopped speaking.
+
+`voice_end` therefore means *no more audio is coming for this segment*. It does not mean the
+avatar has finished speaking, and it is not a cue to return to idle. Your own playout position
+is the only thing that knows when speech ends.
+
 ### 4. Voice Interrupt Command
 
 Immediately interrupts any ongoing avatar speech. 
@@ -246,9 +257,16 @@ The server may optionally respond with a heartbeat acknowledgment:
 
 ### 6. Special Command
 
-Sends special instructions or notifications, including avatar actions. `content` is a
-string whose format depends on the instruction; avatar actions, the only use today, put a
-JSON string in it.
+Sends special instructions or notifications. `content` is a string whose format depends on the
+instruction; every use today puts a JSON string in it, with a `type` naming which one:
+
+| `type` | What it carries | Bound to a segment |
+|--------|-----------------|--------------------|
+| `action` | A gesture or cue for the avatar to perform | Yes, when it belongs to speech |
+| `transcript` | The words the agent is about to say | Yes |
+| `state` | Whether the agent is listening, thinking or speaking | No |
+
+Each is described below. A receiver may implement any subset — see the ignore rule.
 
 #### Request Format
 
@@ -286,6 +304,79 @@ Available in development; not yet released.
 Decode the outer message, then decode the JSON string in `content`. For `type: "action"`,
 handle the gesture named by `action`. The vendor defines the gesture names; ignore unsupported
 names and document how actions overlap and stop.
+
+#### Spoken Transcript
+
+*Available in development; not yet released. Off unless the caller enables it.*
+
+The words the agent is about to say, as they are produced:
+
+```json
+{
+  "command": "special",
+  "content": "{\"type\":\"transcript\",\"text\":\" There\"}",
+  "segment_id": "seg-7f3a1c",
+  "event_id": "18ef35b7075d419a"
+}
+```
+
+One frame per piece of text as the reply is generated, not one per sentence — expect many small
+frames, including single words and bare punctuation, and concatenate them yourself. Each carries
+the `segment_id` of the speech it describes, so you can match words to the audio you are about
+to play.
+
+**It arrives ahead of the audio.** Measured: the first piece lands **385–1060 ms before** the
+first `voice` frame of that segment, and the lead does not shrink with reply length. The *last*
+piece of a long reply can arrive after audio has started, so do not wait for the full text
+before beginning playback.
+
+**A lead means text can be sent for speech that never happens.** If the user interrupts, you may
+have received the words and then get a `voice_end` or `voice_interrupt` for a segment that never
+carried a single `voice` frame. Nothing is retracted — that empty segment is the signal. Treat
+text as provisional until its audio arrives.
+
+#### Conversation State
+
+*Available in development; not yet released. Off unless the caller enables it.*
+
+Where the conversation has got to, so the avatar can prepare before it has to speak:
+
+```json
+{
+  "command": "special",
+  "content": "{\"type\":\"state\",\"listening\":false,\"thinking\":true,\"speaking\":false,\"effective_state\":\"thinking\"}",
+  "event_id": "5958000e2e5b4af7"
+}
+```
+
+| Field | Meaning |
+|-------|---------|
+| `listening` | The user is speaking. |
+| `thinking` | The agent is composing a reply. |
+| `speaking` | The agent's audio is playing, by the sender's playout clock. |
+| `effective_state` | One value resolved from the three: `speaking` > `listening` > `thinking`, otherwise `silent`. |
+
+**No `segment_id`.** State belongs to no segment: `thinking` is true before a segment exists,
+and `speaking` goes false after the segment it describes has closed.
+
+The whole snapshot is sent on every change, so a dropped frame costs you nothing — the next one
+is complete. **More than one flag can be true at once**, which is normal rather than a glitch:
+the user talking over a reply is `listening` and `speaking` together, and a reply still being
+written while its first audio plays is `thinking` and `speaking`.
+
+Two things that are worth designing around:
+
+- **`thinking` is the early warning.** It becomes true roughly **0.9–2.0 s before** the first
+  `voice` frame, because it fires when the reply is first requested. `speaking: true` is
+  simultaneous with the first `voice` frame, within a few milliseconds, so it confirms rather
+  than warns.
+- **`speaking: false` is the honest end of speech**, unlike `voice_end` — see *How early
+  `voice_end` arrives* above. It follows the real playout clock, so on a long reply it can come
+  tens of seconds after the segment closed.
+
+A brief `silent` can appear mid-turn, between a reply being finished and its audio starting.
+Driving an animation straight from `effective_state` will flicker to idle there; the three flags
+are sent alongside it so you do not have to.
 
 #### Where an action comes from
 

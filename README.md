@@ -93,14 +93,22 @@ the end of a response are both just names here — the protocol carries the trig
 binding to a segment, not the meaning. You declare which names you accept, and which parameters
 each takes; nothing outside that is ever sent.
 
-Two things are worth reading before you implement it:
+The same command carries two other things, both optional and both off unless the caller turns
+them on: the **spoken transcript**, delivered ahead of the audio it describes, and the
+**conversation state** — listening, thinking, speaking — which tells the avatar it is about to
+have to speak roughly a second before any audio arrives.
+
+Three things are worth reading before you implement any of it:
 
 - **the ignore rule** — what to do with a `type`, a key or an action name you do not recognise.
   A receiver that errors or disconnects on an unknown field will break the next time one is
   added.
-- **`segment_id`** — present when the action belongs to a specific piece of speech, absent when
+- **`segment_id`** — present when the message belongs to a specific piece of speech, absent when
   it is immediate. The difference is what lets you hold a gesture with its audio instead of
   playing it against whatever is on screen.
+- **what `voice_end` does and does not mean.** Audio is sent faster than it plays — up to 17x —
+  so `voice_end` can close a segment tens of seconds before the avatar stops speaking. It means
+  no more audio is coming, not that speech has finished.
 
 → **[Special Command and Avatar Actions](./websocket-receive-audio/README.md#6-special-command)**
 covers the frame, both ways an action is triggered with a worked example of each, and the
