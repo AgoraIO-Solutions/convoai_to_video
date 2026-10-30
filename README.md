@@ -73,6 +73,39 @@ sequenceDiagram
 ### 3. Go Audio/Video Publishing — *use as-is or adapt*
 [go-publish-video/](./go-publish-video/) — Publishes YUV video frames and PCM audio into an Agora channel. Feed your generated video and the received audio into this component to push the stream back to users.
 
+## Driving the Avatar: Actions, Gestures and Cues
+
+Beyond audio, the agent can tell your avatar to *do* something — wave, smile, hold a mood for a
+few seconds. These all travel on the existing `special` command, so there is no second channel
+to implement and no new connection:
+
+```json
+{
+  "command": "special",
+  "content": "{\"type\":\"action\",\"action\":\"happy\",\"params\":{\"in_seconds\":3}}",
+  "segment_id": "seg-7f3a1c",
+  "event_id": "cd3c81e682af4bd5a63d60be07b0b537"
+}
+```
+
+**The names and their meaning are yours.** A one-shot gesture and a cue that holds a style until
+the end of a response are both just names here — the protocol carries the trigger and the
+binding to a segment, not the meaning. You declare which names you accept, and which parameters
+each takes; nothing outside that is ever sent.
+
+Two things are worth reading before you implement it:
+
+- **the ignore rule** — what to do with a `type`, a key or an action name you do not recognise.
+  A receiver that errors or disconnects on an unknown field will break the next time one is
+  added.
+- **`segment_id`** — present when the action belongs to a specific piece of speech, absent when
+  it is immediate. The difference is what lets you hold a gesture with its audio instead of
+  playing it against whatever is on screen.
+
+→ **[Special Command and Avatar Actions](./websocket-receive-audio/README.md#6-special-command)**
+covers the frame, both ways an action is triggered with a worked example of each, and the
+configuration that drives them.
+
 ## Testing
 
 No unit-test suite is included. The Python scripts provide manual checks;

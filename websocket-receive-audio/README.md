@@ -287,6 +287,71 @@ Decode the outer message, then decode the JSON string in `content`. For `type: "
 handle the gesture named by `action`. The vendor defines the gesture names; ignore unsupported
 names and document how actions overlap and stop.
 
+#### Where an action comes from
+
+Two routes produce the same frame. You receive identical messages either way, so nothing here
+changes what you implement — it is background for the integration, and it explains why
+`segment_id` is sometimes present and sometimes not.
+
+**Inline in the reply.** The model writes the action in its own reply text, wrapped in brackets.
+The wrapper is removed before speech synthesis, so it is never spoken, and the action is sent
+bound to the speech it was written in.
+
+The model produces:
+
+```
+[wave] Hello there!
+```
+
+You receive, in this order:
+
+```json
+{"command":"special","content":"{\"type\":\"action\",\"action\":\"wave\"}","segment_id":"seg-7f3a1c","event_id":"cd3c81e6"}
+{"command":"voice","audio":"<base64 PCM of \"Hello there!\">","segment_id":"seg-7f3a1c","event_id":"9232d7d3"}
+{"command":"voice_end","segment_id":"seg-7f3a1c","event_id":"3593eb34"}
+```
+
+The action carries the **same `segment_id` as the audio it belongs to**, and arrives before it,
+so you can hold it with the audio rather than play it against whatever is on screen now.
+
+**A tool call.** The model calls a function instead of writing in its reply. That action is a
+live instruction, tied to no utterance, so it arrives with **no `segment_id`** — act on it
+immediately:
+
+```json
+{"command":"special","content":"{\"type\":\"action\",\"action\":\"happy\",\"params\":{\"in_seconds\":3}}","event_id":"7065b5fe"}
+```
+
+#### What the caller configures
+
+Both routes are driven by one list, in the avatar block of the session request:
+
+```json
+"avatar": {
+  "params": {
+    "actions": [
+      "wave",
+      "smile",
+      {"name": "happy", "params": {"in_seconds": {"min": 0, "max": 60}}}
+    ],
+    "action_patterns": [4]
+  }
+}
+```
+
+| Key | Effect |
+|-----|--------|
+| `actions` | The names you accept. A plain string, or an object declaring the parameters that name takes and the range of each. Nothing outside this list is sent. |
+| `action_patterns` | Which bracket pair marks an action in the reply text, by id: `1` = `（）`, `2` = `【】`, `3` = `()`, `4` = `[]`, `5` = `{}` — the same ids `tts.skip_patterns` takes. **Omit it and the inline route is off**; the tool route still works. |
+
+Declaring `actions` is also what offers the model the function for the tool route, with your
+names as the only permitted values and each declared parameter as an optional number inside
+your range. A name you did not declare, or a value outside a declared range, is not sent.
+
+**Set `tts.skip_patterns` to the same id as `action_patterns`.** `action_patterns` says what
+marks an action; `skip_patterns` is what keeps it out of the speech. With the first and not the
+second, the avatar performs the gesture and the voice says "wave".
+
 **Ignore what you do not implement.** This applies to the whole `content` object and is the
 rule that lets it grow without breaking a receiver:
 
