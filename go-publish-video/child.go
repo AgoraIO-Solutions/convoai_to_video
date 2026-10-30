@@ -31,18 +31,34 @@ import (
 // These are H.273 indices, and in H.273 Table 4 the matrix index **0 is GBR**,
 // not "unspecified" (which is 2). So an unset ColorSpace tells every receiver
 // that the three I420 planes are Green, Blue and Red. A receiver that believes
-// it reads the luma plane as green: measured on a mid-skin tone, the correct
-// rgb(194,143,124) is rendered rgb(155,150,110). Flat grey is unaffected, which
-// is why the symptom looks like a green face on an ordinary background.
+// it reads the luma plane as green. Hardware decoders commonly ignore the
+// signalled matrix, so the fault only shows where it is honoured -- which
+// includes the software fallback a decoder rebuild drops to after a
+// renegotiation. That is why it appears on mute and not before.
 //
-// Hardware decoders commonly ignore the signalled matrix and assume BT.709/601,
-// so the fault only shows where it is honoured -- which includes the software
-// fallback a decoder rebuild drops to after a renegotiation.
+// The default is **2, unspecified** rather than a real matrix, and that is
+// deliberate. This process is handed raw I420 and has no idea what colour
+// space it is in; naming one is a guess. "Unspecified" tells the receiver to
+// apply its own default, which is what it was already doing while the frames
+// were untagged -- so the green goes away and nothing else about the picture
+// changes.
 //
-// BT.709 limited range is the default because that is what HD camera and avatar
-// video almost always is. Override the flags if the source is genuinely
-// something else; declaring the truth is the point, not these particular
-// numbers.
+// Naming a matrix instead is a visible change when the guess disagrees with
+// the receiver's default, which is resolution-dependent: receivers assume
+// BT.601 for standard-definition frames and BT.709 for high-definition ones.
+// Measured here on 640x360 content, declaring BT.709 against a receiver
+// defaulting to BT.601 moved mean luma by -3.3 and the green channel by -4.2,
+// which looks like the picture quietly getting darker.
+//
+// So: override these only if you genuinely know what your source is. If you
+// do, declaring it is better than leaving it to a guess.
+var videoColorSpace = agoraservice.ColorSpaceType{
+	MatrixId:    2, // unspecified -- receiver's default, NOT 0, which means GBR
+	RangeId:     0, // unspecified
+	PrimariesId: 2, // unspecified
+	TransferId:  2, // unspecified
+}
+
 // envInt reads an integer from the environment, falling back to def when the
 // variable is unset or not a number. The colour-space defaults use it so the
 // value can be chosen by whatever spawns this process.
@@ -53,13 +69,6 @@ func envInt(name string, def int) int {
 		}
 	}
 	return def
-}
-
-var videoColorSpace = agoraservice.ColorSpaceType{
-	MatrixId:    1, // BT.709
-	RangeId:     1, // limited / broadcast
-	PrimariesId: 1, // BT.709
-	TransferId:  1, // BT.709
 }
 
 var (
@@ -215,10 +224,10 @@ func main() {
 	// value: see videoColorSpace below for why that matters.
 	// Env defaults, so a wrapper that spawns this process without knowing about
 	// these flags can still set them; an explicit flag still wins.
-	colorMatrixFlag := flag.Int("colorMatrix", envInt("AVATAR_COLOR_MATRIX", 1), "H.273 matrix coefficients (1=BT.709, 5=BT.470BG/601, 2=unspecified, 0=GBR -- do not use 0)")
-	colorRangeFlag := flag.Int("colorRange", envInt("AVATAR_COLOR_RANGE", 1), "colour range (1=limited/broadcast, 2=full, 0=unspecified)")
-	colorPrimariesFlag := flag.Int("colorPrimaries", envInt("AVATAR_COLOR_PRIMARIES", 1), "H.273 colour primaries (1=BT.709, 2=unspecified)")
-	colorTransferFlag := flag.Int("colorTransfer", envInt("AVATAR_COLOR_TRANSFER", 1), "H.273 transfer characteristics (1=BT.709, 2=unspecified)")
+	colorMatrixFlag := flag.Int("colorMatrix", envInt("AVATAR_COLOR_MATRIX", 2), "H.273 matrix coefficients (2=unspecified and the default, 1=BT.709, 5=BT.470BG/601; never 0, which means GBR)")
+	colorRangeFlag := flag.Int("colorRange", envInt("AVATAR_COLOR_RANGE", 0), "colour range (0=unspecified and the default, 1=limited/broadcast, 2=full)")
+	colorPrimariesFlag := flag.Int("colorPrimaries", envInt("AVATAR_COLOR_PRIMARIES", 2), "H.273 colour primaries (2=unspecified and the default, 1=BT.709)")
+	colorTransferFlag := flag.Int("colorTransfer", envInt("AVATAR_COLOR_TRANSFER", 2), "H.273 transfer characteristics (2=unspecified and the default, 1=BT.709)")
 
 	flag.Parse()
 
