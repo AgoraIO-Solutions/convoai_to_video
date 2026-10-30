@@ -10,12 +10,57 @@ import (
 	"io"
 	"log"
 	"os"
+	"strconv"
 	"time"
 
 	"go-publish-video/ipc/ipcgen"
 
 	agoraservice "github.com/AgoraIO-Extensions/Agora-Golang-Server-SDK/v2/go_sdk/rtc"
 )
+
+// Colour space sent with every video frame.
+//
+// It has to be set explicitly. `ExternalVideoFrame.ColorSpace` is a struct, so
+// leaving it out does not mean "unspecified" -- Go zero-values it and the SDK
+// copies all four fields to the native frame unconditionally. Its own source
+// says so:
+//
+//	// fill color space: for go,the default value of struct 's member is zero value!
+//	cFrame.color_space.matrix_id = C.int(frame.ColorSpace.MatrixId)
+//
+// These are H.273 indices, and in H.273 Table 4 the matrix index **0 is GBR**,
+// not "unspecified" (which is 2). So an unset ColorSpace tells every receiver
+// that the three I420 planes are Green, Blue and Red. A receiver that believes
+// it reads the luma plane as green: measured on a mid-skin tone, the correct
+// rgb(194,143,124) is rendered rgb(155,150,110). Flat grey is unaffected, which
+// is why the symptom looks like a green face on an ordinary background.
+//
+// Hardware decoders commonly ignore the signalled matrix and assume BT.709/601,
+// so the fault only shows where it is honoured -- which includes the software
+// fallback a decoder rebuild drops to after a renegotiation.
+//
+// BT.709 limited range is the default because that is what HD camera and avatar
+// video almost always is. Override the flags if the source is genuinely
+// something else; declaring the truth is the point, not these particular
+// numbers.
+// envInt reads an integer from the environment, falling back to def when the
+// variable is unset or not a number. The colour-space defaults use it so the
+// value can be chosen by whatever spawns this process.
+func envInt(name string, def int) int {
+	if raw := os.Getenv(name); raw != "" {
+		if v, err := strconv.Atoi(raw); err == nil {
+			return v
+		}
+	}
+	return def
+}
+
+var videoColorSpace = agoraservice.ColorSpaceType{
+	MatrixId:    1, // BT.709
+	RangeId:     1, // limited / broadcast
+	PrimariesId: 1, // BT.709
+	TransferId:  1, // BT.709
+}
 
 var (
 	// Global Agora SDK objects
@@ -29,9 +74,9 @@ var (
 	initBitrate       int
 	initMinBitrate    int
 
-	globalAppID   string
-	globalChannel string
-	globalUserID  string
+	globalAppID     string
+	globalChannel   string
+	globalUserID    string
 	globalCodecName string
 )
 
@@ -166,8 +211,23 @@ func main() {
 	bitrateFlag := flag.Int("bitrate", 1000, "Video target bitrate in Kbps")
 	minBitrateFlag := flag.Int("minBitrate", 100, "Video minimum bitrate in Kbps")
 	enableStringUIDFlag := flag.Bool("enableStringUID", false, "Enable string UID support")
+	// Colour space of the I420 we publish. Declared, never left to the zero
+	// value: see videoColorSpace below for why that matters.
+	// Env defaults, so a wrapper that spawns this process without knowing about
+	// these flags can still set them; an explicit flag still wins.
+	colorMatrixFlag := flag.Int("colorMatrix", envInt("AVATAR_COLOR_MATRIX", 1), "H.273 matrix coefficients (1=BT.709, 5=BT.470BG/601, 2=unspecified, 0=GBR -- do not use 0)")
+	colorRangeFlag := flag.Int("colorRange", envInt("AVATAR_COLOR_RANGE", 1), "colour range (1=limited/broadcast, 2=full, 0=unspecified)")
+	colorPrimariesFlag := flag.Int("colorPrimaries", envInt("AVATAR_COLOR_PRIMARIES", 1), "H.273 colour primaries (1=BT.709, 2=unspecified)")
+	colorTransferFlag := flag.Int("colorTransfer", envInt("AVATAR_COLOR_TRANSFER", 1), "H.273 transfer characteristics (1=BT.709, 2=unspecified)")
 
 	flag.Parse()
+
+	videoColorSpace = agoraservice.ColorSpaceType{
+		MatrixId:    *colorMatrixFlag,
+		RangeId:     *colorRangeFlag,
+		PrimariesId: *colorPrimariesFlag,
+		TransferId:  *colorTransferFlag,
+	}
 
 	globalAppID = *appIDFlag
 	globalChannel = *channelNameFlag
@@ -196,7 +256,7 @@ func main() {
 	serviceCfg.UseStringUid = enableStringUID
 	serviceCfg.LogPath = "./agora_child_sdk.log"
 	serviceCfg.LogSize = 5 * 1024 * 1024
-	serviceCfg.LogLevel = 5  // Error only
+	serviceCfg.LogLevel = 5 // Error only
 
 	if ret := agoraservice.Initialize(serviceCfg); ret != 0 {
 		errMsg := fmt.Sprintf("Agora SDK global Initialize() failed with code: %d", ret)
@@ -370,12 +430,13 @@ func main() {
 			}
 
 			extFrame := &agoraservice.ExternalVideoFrame{
-				Type:      agoraservice.VideoBufferRawData,
-				Format:    agoraservice.VideoPixelI420,
-				Buffer:    frameData,
-				Stride:    int(initWidth),
-				Height:    int(initHeight),
-				Timestamp: samplePayload.TimestampUnixNano() / 1_000_000,
+				Type:       agoraservice.VideoBufferRawData,
+				Format:     agoraservice.VideoPixelI420,
+				Buffer:     frameData,
+				Stride:     int(initWidth),
+				Height:     int(initHeight),
+				Timestamp:  samplePayload.TimestampUnixNano() / 1_000_000,
+				ColorSpace: videoColorSpace,
 			}
 			rtcConnection.PushVideoFrame(extFrame)
 
