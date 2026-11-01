@@ -366,10 +366,16 @@ written while its first audio plays is `thinking` and `speaking`.
 
 Two things that are worth designing around:
 
-- **`thinking` is the early warning.** It becomes true roughly **0.9–2.0 s before** the first
-  `voice` frame, because it fires when the reply is first requested. `speaking: true` is
-  simultaneous with the first `voice` frame, within a few milliseconds, so it confirms rather
-  than warns.
+- **`thinking` is the early warning.** It becomes true when the reply is first requested, which
+  is **roughly 1–2.5 s before** the first `voice` frame — measured between 0.9 s and 2.3 s
+  across runs. Treat that as an order of magnitude rather than a budget: it depends on the
+  language model and on how long a reply it is composing, so design for "about a second or two
+  of notice", not for a fixed number. `speaking: true`, by contrast, lands **within a few
+  milliseconds** of the first `voice` frame (13 ms on the most recent run), so it confirms
+  rather than warns.
+
+  `thinking` can also go false and true again within the same turn, which is why the flag is
+  worth reading as a level rather than an edge.
 - **`speaking: false` is the honest end of speech**, unlike `voice_end` — see *How early
   `voice_end` arrives* above. It follows the real playout clock, so on a long reply it can come
   tens of seconds after the segment closed.
