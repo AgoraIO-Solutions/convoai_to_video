@@ -1,8 +1,6 @@
 package main
 
 import (
-	"strings"
-
 	agoraservice "github.com/AgoraIO-Extensions/Agora-Golang-Server-SDK/v2/go_sdk/rtc"
 )
 
@@ -18,74 +16,62 @@ import (
 //
 // These are H.273 indices, and in H.273 Table 4 the matrix index **0 is GBR**,
 // not "unspecified" (which is 2). So an unset ColorSpace tells every receiver
-// that the three I420 planes are Green, Blue and Red. A receiver that believes
-// it reads the luma plane as green. Hardware decoders commonly ignore the
-// signalled matrix, so the fault only shows where it is honoured -- which
-// includes the software fallback a decoder rebuild drops to after a
-// renegotiation. That is why it appears on mute and not before.
+// that the three I420 planes are Green, Blue and Red.
 //
-// The default is **2, unspecified** rather than a real matrix, and that is
+// What that costs depends on the codec, and both halves were measured in a
+// browser rather than reasoned about:
+//
+//   - H264/VP8: matrix 0 is a legal but false statement, so the picture goes
+//     green -- and only once something honours it. Hardware decoders commonly
+//     ignore the signalled matrix, so the fault appears when a renegotiation
+//     drops the decoder to its software path, which is why it showed up on
+//     mute rather than at the start of the call.
+//   - AV1: matrix 0 is not merely wrong, it is **non-conformant**. The AV1
+//     spec requires 4:4:4 when matrix_coefficients is MC_IDENTITY (0), and
+//     this publisher sends I420, which is 4:2:0. Chrome tolerates the invalid
+//     stream and renders GBR immediately; a stricter decoder may refuse it
+//     outright.
+//
+// The value below is **2, unspecified**, for every codec, and that is
 // deliberate. This process is handed raw I420 and has no idea what colour
 // space it is in; naming one is a guess. "Unspecified" tells the receiver to
 // apply its own default, which is what it was already doing while the frames
 // were untagged -- so the green goes away and nothing else about the picture
-// changes.
-//
-// Naming a matrix instead is a visible change when the guess disagrees with
-// the receiver's default, which is resolution-dependent: receivers assume
-// BT.601 for standard-definition frames and BT.709 for high-definition ones.
-// Measured here on 640x360 content, declaring BT.709 against a receiver
+// changes. Measured on 640x360 content, declaring BT.709 against a receiver
 // defaulting to BT.601 moved mean luma by -3.3 and the green channel by -4.2,
-// which looks like the picture quietly getting darker.
+// which looks like the picture quietly getting darker. Unspecified cannot be
+// wrong in that way, because it claims nothing.
 //
-// **AV1 is the exception, and it is not optional.** The Go SDK's own README
-// ("How to Encode with AV1 and Remain Compatible with Web Decoding") requires
-// a real matrix there -- RangeId 1, MatrixId 5, PrimariesId 2, TransferId 2 --
-// and says that without it "Web decoding of AV1 video stream will not work".
-// That is a harder failure than a colour shift: the browser does not decode at
-// all. So the default is chosen by codec below. (The same section also warns
-// that for AV1 a non-nil MetadataBuffer carrying SEI stops the web client
-// decoding, which is why this publisher never sets one.)
+// # On the AV1 recommendation in the Go SDK README
 //
-// So: override these only if you genuinely know what your source is. If you
-// do, declaring it is better than leaving it to a guess.
-var videoColorSpace = defaultColorSpaceFor("")
+// That README ("How to Encode with AV1 and Remain Compatible with Web
+// Decoding") asks for (PrimariesId 2, TransferId 2, MatrixId 5, RangeId 1) and
+// says that without it "Web decoding of AV1 video stream will not work". We
+// could not reproduce that: AV1 published with everything unspecified decodes
+// and renders correctly in Chrome (Web SDK 4.24.9), including across the
+// mute/unmute renegotiation. The failure that recommendation describes is
+// almost certainly the zero value -- matrix 0, the non-conformant case above
+// -- for which (2,2,5,1) is *a* fix rather than *the* fix.
+//
+// So this file does not branch on codec. If a receiver is ever reported
+// failing to decode AV1, that tuple is the first thing to try; it is a
+// conformant alternative, not a contradiction. Do not reintroduce the branch
+// on the strength of the README alone -- it asserts a matrix and a range for
+// pixel data this process never inspected, which is the one way this code can
+// make a picture worse.
+//
+// Override these only if you genuinely know what your source is. If you do,
+// declaring it is better than leaving it to a guess.
+var videoColorSpace = defaultColorSpace()
 
-// defaultColorSpaceFor picks the colour space to publish when the caller has
-// not named one. See the comment above for why AV1 differs.
-func defaultColorSpaceFor(codec string) agoraservice.ColorSpaceType {
-	if strings.EqualFold(codec, "AV1") {
-		return agoraservice.ColorSpaceType{
-			RangeId:     1, // limited / broadcast
-			MatrixId:    5, // BT.470BG -- required for web decoding of AV1
-			PrimariesId: 2, // unspecified
-			TransferId:  2, // unspecified
-		}
-	}
+// defaultColorSpace is the colour space to publish when the caller has not
+// named one. See the comment above for why it says "unspecified" rather than
+// naming a matrix, and why it is the same for H264, VP8 and AV1.
+func defaultColorSpace() agoraservice.ColorSpaceType {
 	return agoraservice.ColorSpaceType{
-		MatrixId:    2, // unspecified -- receiver's default, NOT 0, which means GBR
 		RangeId:     0, // unspecified
+		MatrixId:    2, // unspecified -- NOT 0, which means GBR
 		PrimariesId: 2, // unspecified
 		TransferId:  2, // unspecified
 	}
-}
-
-// codecFromArgs reads -videoCodec out of the raw arguments. The colour-space
-// flag defaults depend on the codec, and a flag's default has to be fixed
-// before flag.Parse runs, so this cannot wait for the parsed value.
-func codecFromArgs(args []string) string {
-	for i, a := range args {
-		if a == "-videoCodec" || a == "--videoCodec" {
-			if i+1 < len(args) {
-				return args[i+1]
-			}
-			return ""
-		}
-		for _, pfx := range []string{"-videoCodec=", "--videoCodec="} {
-			if strings.HasPrefix(a, pfx) {
-				return strings.TrimPrefix(a, pfx)
-			}
-		}
-	}
-	return ""
 }

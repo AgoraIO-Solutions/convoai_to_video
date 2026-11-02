@@ -182,9 +182,8 @@ func main() {
 	// Colour space of the I420 we publish. Declared, never left to the zero
 	// value: see videoColorSpace below for why that matters.
 	// Env defaults, so a wrapper that spawns this process without knowing about
-	// these flags can still set them; an explicit flag still wins. The defaults
-	// depend on the codec, so read it from the raw arguments before parsing.
-	cs := defaultColorSpaceFor(codecFromArgs(os.Args[1:]))
+	// these flags can still set them; an explicit flag still wins.
+	cs := defaultColorSpace()
 	colorMatrixFlag := flag.Int("colorMatrix", envInt("AVATAR_COLOR_MATRIX", cs.MatrixId), "H.273 matrix coefficients (2=unspecified and the default, 1=BT.709, 5=BT.470BG/601; never 0, which means GBR)")
 	colorRangeFlag := flag.Int("colorRange", envInt("AVATAR_COLOR_RANGE", cs.RangeId), "colour range (0=unspecified and the default, 1=limited/broadcast, 2=full)")
 	colorPrimariesFlag := flag.Int("colorPrimaries", envInt("AVATAR_COLOR_PRIMARIES", cs.PrimariesId), "H.273 colour primaries (2=unspecified and the default, 1=BT.709)")
