@@ -106,6 +106,71 @@ https://webdemo.agora.io/basicVideoCall/index.html
 
 Use your App ID and Channel Name to join the stream.
 
+## Colour space — set it, or the picture goes green
+
+`ExternalVideoFrame.ColorSpace` is a **struct**, so omitting it does not mean
+"unspecified". Go zero-values it and the SDK copies all four fields to the native
+frame, and in H.273 the matrix index `0` means **GBR** — you have told the receiver
+your three I420 planes are Green, Blue and Red.
+
+This publisher therefore always declares it, the same way for every codec:
+
+```go
+extFrame := &agoraservice.ExternalVideoFrame{
+    Type:      agoraservice.VideoBufferRawData,
+    Format:    agoraservice.VideoPixelI420,
+    Buffer:    frameData,
+    Stride:    int(width),
+    Height:    int(height),
+    Timestamp: timestampMs,
+    ColorSpace: agoraservice.ColorSpaceType{
+        RangeId:     0, // unspecified
+        MatrixId:    2, // unspecified -- NOT 0, which means GBR
+        PrimariesId: 2, // unspecified
+        TransferId:  2, // unspecified
+    },
+}
+rtcConnection.PushVideoFrame(extFrame)
+```
+
+`2` means "unspecified", so the receiver applies its own default — which is what it
+was already doing while the frames were untagged. Naming a real matrix instead is a
+guess about pixel data this process never inspected, and when the guess disagrees
+with the receiver's default it darkens the picture (measured at −3.3 luma and −4.2
+green on 640×360 content). Only declare one if you actually know your source.
+
+What goes wrong without it differs by codec, and both were measured in a browser:
+
+| Codec | With matrix 0 (unset) |
+| --- | --- |
+| H264 / VP8 | A legal but false statement, so the picture goes green — and only once something honours it. Hardware decoders usually ignore the signalled matrix, so it appears when a renegotiation drops the decoder to its software path. That is why it shows up on mute rather than at the start of a call. |
+| AV1 | Not merely wrong but **non-conformant**: the AV1 spec requires 4:4:4 when `matrix_coefficients` is `MC_IDENTITY` (0), and this publisher sends I420 (4:2:0). Chrome tolerates the invalid stream and renders GBR immediately; a stricter decoder may refuse it. |
+
+The publisher logs what it declared, so you can check without a wire probe:
+
+```
+Declared colour space: matrix=2 range=0 primaries=2 transfer=2 (codec=AV1; ...)
+```
+
+Override with `-colorMatrix` / `-colorRange` / `-colorPrimaries` / `-colorTransfer`,
+or the `AVATAR_COLOR_*` environment variables.
+
+### On the AV1 note in the Go SDK README
+
+The Go SDK's own README asks for `(PrimariesId 2, TransferId 2, MatrixId 5, RangeId 1)`
+for AV1 and says web decoding "will not work" without it. We could not reproduce that:
+AV1 with everything unspecified decodes and renders correctly in Chrome (Web SDK
+4.24.9), including across a mute/unmute renegotiation. The failure that note describes
+is almost certainly the zero value — matrix 0, the non-conformant case above — for
+which `(2,2,5,1)` is *a* conformant fix rather than the only one.
+
+If a receiver is ever reported failing to decode AV1, that tuple is the first thing to
+try. It is an alternative, not a contradiction.
+
+The same SDK note adds that with RTC SDK `tag=163`, a non-nil `MetadataBuffer` carrying
+SEI also stops the web client decoding AV1. This publisher never sets one. Unlike
+`ColorSpace`, `MetadataBuffer` is a slice, so leaving it out genuinely is nil.
+
 ## Testing
 
 No unit-test suite is included. `make test` reports that gap and exits non-zero.
