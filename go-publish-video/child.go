@@ -216,6 +216,14 @@ func main() {
 	childLogger.Printf("Initial parameters from command line: AppID=%s, Channel=%s, UserID=%s, Codec=%s, Res=%dx%d@%d, Bitrate=%dKbps, MinBitrate=%dKbps, AudioSR=%d, AudioCh=%d, StringUID=%t",
 		globalAppID, globalChannel, globalUserID, *videoCodecFlag, initWidth, initHeight, initFrameRate, initBitrate, initMinBitrate, initSampleRate, initAudioChannels, enableStringUID)
 
+	// The colour space is the one thing here that fails silently and remotely:
+	// a wrong matrix shows up as a green or dark picture in someone else's
+	// browser, and for AV1 as no picture at all. Log what we actually declare,
+	// so it can be read off a publisher log instead of measured off the wire.
+	childLogger.Printf("Declared colour space: matrix=%d range=%d primaries=%d transfer=%d (codec=%s; matrix 2=unspecified, 5=BT.470BG required for AV1 web decoding, 0=GBR and never correct)",
+		videoColorSpace.MatrixId, videoColorSpace.RangeId, videoColorSpace.PrimariesId,
+		videoColorSpace.TransferId, *videoCodecFlag)
+
 	// Add a small delay to ensure stdout redirection is complete
 	time.Sleep(100 * time.Millisecond)
 
