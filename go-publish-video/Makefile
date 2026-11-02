@@ -13,7 +13,7 @@ generate:
 build: generate
 	@echo "Building binaries..."
 	@go mod tidy
-	@go build -o child child.go child_ipc.go
+	@go build -o child child.go child_ipc.go colorspace.go
 	@go build -o parent parent.go
 	@chmod +x child parent
 	@echo "Build complete."
